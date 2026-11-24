@@ -1,0 +1,230 @@
+import 'store_record.dart';
+
+/// DATA CONTOH untuk mengisi tampilan; bukan data sungguhan.
+const sampleStoreRecords = <StoreRecord>[
+  StoreRecord(
+    code: 'TK01',
+    name: 'Toko Berkah Jaya',
+    area: 'Surabaya',
+    admin: 'Sari Ayu',
+    createdLabel: '2 Nov 2026',
+    transactionsThisMonth: 1284,
+    users: [
+      StoreUser(
+        initials: 'SA',
+        name: 'Sari Ayu',
+        note: 'Juga mengelola TK02, TK03',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'RW',
+        name: 'Rina Wati',
+        note: 'Shift pagi',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'BS',
+        name: 'Budi Santoso',
+        note: 'Shift sore',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'TN',
+        name: 'Tono',
+        note: 'Shift sore',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK02',
+    name: 'Warung Bu Sri',
+    area: 'Sidoarjo',
+    admin: 'Sari Ayu',
+    createdLabel: '9 Nov 2026',
+    transactionsThisMonth: 412,
+    scanEnabled: false,
+    users: [
+      StoreUser(
+        initials: 'SA',
+        name: 'Sari Ayu',
+        note: 'Juga mengelola TK01, TK03',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'SR',
+        name: 'Sri Rahayu',
+        note: 'Shift penuh',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK03',
+    name: 'Kios Sembako Makmur',
+    area: 'Gresik',
+    admin: 'Sari Ayu',
+    createdLabel: '12 Nov 2026',
+    transactionsThisMonth: 268,
+    users: [
+      StoreUser(
+        initials: 'SA',
+        name: 'Sari Ayu',
+        note: 'Juga mengelola TK01, TK02',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'DW',
+        name: 'Dewi',
+        note: 'Shift pagi',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'FK',
+        name: 'Fajar',
+        note: 'Shift sore',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK04',
+    name: 'Toko Sumber Rejeki',
+    area: 'Malang',
+    admin: 'Hendra',
+    createdLabel: '14 Nov 2026',
+    transactionsThisMonth: 351,
+    users: [
+      StoreUser(
+        initials: 'HD',
+        name: 'Hendra',
+        note: 'Juga mengelola TK05',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'LM',
+        name: 'Lilis',
+        note: 'Shift pagi',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'YG',
+        name: 'Yoga',
+        note: 'Shift sore',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK05',
+    name: 'Warung Kopi Pojok',
+    area: 'Surabaya',
+    admin: 'Hendra',
+    createdLabel: '16 Nov 2026',
+    transactionsThisMonth: 190,
+    users: [
+      StoreUser(
+        initials: 'HD',
+        name: 'Hendra',
+        note: 'Juga mengelola TK04',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'NR',
+        name: 'Nur',
+        note: 'Shift penuh',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK06',
+    name: 'Minimarket Sinar',
+    area: 'Mojokerto',
+    admin: 'Lestari',
+    createdLabel: '18 Nov 2026',
+    transactionsThisMonth: 520,
+    users: [
+      StoreUser(
+        initials: 'LS',
+        name: 'Lestari',
+        note: 'Juga mengelola TK07',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'A1',
+        name: 'Anton',
+        note: 'Shift pagi',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'B1',
+        name: 'Bayu',
+        note: 'Shift siang',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'C1',
+        name: 'Citra',
+        note: 'Shift sore',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'D1',
+        name: 'Dimas',
+        note: 'Shift malam',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK07',
+    name: 'Toko Kelontong Ijo',
+    area: 'Jombang',
+    admin: 'Lestari',
+    createdLabel: '19 Nov 2026',
+    active: false,
+    users: [
+      StoreUser(
+        initials: 'LS',
+        name: 'Lestari',
+        note: 'Juga mengelola TK06',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'IJ',
+        name: 'Ijah',
+        note: 'Shift penuh',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+  StoreRecord(
+    code: 'TK08',
+    name: 'Depot Mie Barokah',
+    area: 'Pasuruan',
+    admin: 'Agus',
+    createdLabel: '22 Nov 2026',
+    transactionsThisMonth: 96,
+    users: [
+      StoreUser(
+        initials: 'AG',
+        name: 'Agus',
+        note: 'Pengelola toko',
+        role: UserRole.admin,
+      ),
+      StoreUser(
+        initials: 'MB',
+        name: 'Mbak Eni',
+        note: 'Shift pagi',
+        role: UserRole.kasir,
+      ),
+      StoreUser(
+        initials: 'PK',
+        name: 'Pak Joko',
+        note: 'Shift sore',
+        role: UserRole.kasir,
+      ),
+    ],
+  ),
+];
