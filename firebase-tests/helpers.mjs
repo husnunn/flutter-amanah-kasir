@@ -8,11 +8,21 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const PROJECT_ID = 'demo-amanah-kasir';
 
-export function createEnv() {
+/**
+ * Membuat test environment hanya untuk layanan yang dipakai berkas tes itu.
+ * Tiap berkas tes berjalan di proses sendiri; bila keduanya mengirim aturan ke
+ * kedua emulator, penggantian set aturan oleh satu proses bisa mengganggu proses
+ * lain (tes Storage jadi sesekali gagal di hook).
+ */
+export function createEnv({ firestore = false, storage = false } = {}) {
   return initializeTestEnvironment({
     projectId: PROJECT_ID,
-    firestore: { rules: readFileSync(resolve(root, 'firestore.rules'), 'utf8') },
-    storage: { rules: readFileSync(resolve(root, 'storage.rules'), 'utf8') },
+    ...(firestore && {
+      firestore: { rules: readFileSync(resolve(root, 'firestore.rules'), 'utf8') },
+    }),
+    ...(storage && {
+      storage: { rules: readFileSync(resolve(root, 'storage.rules'), 'utf8') },
+    }),
   });
 }
 

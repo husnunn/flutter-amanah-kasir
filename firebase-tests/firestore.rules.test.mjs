@@ -18,7 +18,7 @@ import { anonFs, createEnv, fs, seed } from './helpers.mjs';
 
 let env;
 before(async () => {
-  env = await createEnv();
+  env = await createEnv({ firestore: true });
 });
 after(async () => {
   await env.cleanup();

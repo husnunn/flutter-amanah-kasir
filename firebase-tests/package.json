@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Tes Security Rules (Firestore + Storage) di Firebase Emulator",
   "scripts": {
-    "test": "firebase emulators:exec --config ../firebase.json --project demo-amanah-kasir --only firestore,storage \"node --test\"",
+    "test": "firebase emulators:exec --config ../firebase.json --project demo-amanah-kasir --only firestore,storage \"node --test --test-concurrency=1\"",
     "smoke": "firebase emulators:exec --config ../firebase.json --project demo-amanah-kasir --only auth,firestore,functions \"node ../functions/scripts/smoke-emulator.mjs\""
   },
   "devDependencies": {

@@ -5,7 +5,7 @@ import { createEnv, storage } from './helpers.mjs';
 
 let env;
 before(async () => {
-  env = await createEnv();
+  env = await createEnv({ storage: true });
 });
 after(async () => {
   await env.cleanup();
