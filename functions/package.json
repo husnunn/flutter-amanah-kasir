@@ -1,0 +1,16 @@
+{
+  "name": "amanah-kasir-functions",
+  "private": true,
+  "description": "Cloud Functions Amanah Kasir: kelola user, peran, dan akses toko",
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "scripts": {
+    "test": "node --test",
+    "seed:emulator": "node scripts/seed-emulator.mjs",
+    "create-superadmin": "node scripts/create-superadmin.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  }
+}

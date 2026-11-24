@@ -1,0 +1,213 @@
+rules_version = '2';
+
+// Security Rules Amanah Kasir (multi-toko).
+//
+// Identitas dibaca dari custom claims di ID token, diset Cloud Function:
+//   role     : 'superadmin' | 'admin' | 'kasir'
+//   storeIds : daftar toko AKTIF milik user (kasir tepat 1, admin >= 1, superadmin kosong)
+//
+// Prinsip:
+// - Satu `match` per koleksi. Firestore memakai logika OR antar aturan yang cocok,
+//   jadi aturan lebar seperti `stores/{id}/**` tidak dipakai agar tidak menimpa
+//   aturan yang lebih sempit.
+// - Path yang tidak cocok dengan aturan mana pun otomatis ditolak.
+// - Superadmin hanya MEMBACA data operasional toko; ia tidak boleh membuat
+//   transaksi/produk/pengeluaran.
+//
+// Keterbatasan yang diketahui (Firestore tidak bisa memeriksanya):
+// - Tidak ada keamanan per field: kasir yang membaca produk juga melihat costPrice.
+// - Kasir menulis daily_summaries lewat increment; rules tidak bisa memverifikasi
+//   besarnya angka, hanya field mana yang boleh disentuh.
+// - Query daftar transaksi oleh kasir wajib menyertakan where('cashierId', '==', uid).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helper ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function claimRole() {
+      return request.auth.token.get('role', '');
+    }
+
+    function isSuperadmin() {
+      return signedIn() && claimRole() == 'superadmin';
+    }
+
+    function inStore(storeId) {
+      return signedIn()
+          && request.auth.token.get('storeIds', []) is list
+          && storeId in request.auth.token.get('storeIds', []);
+    }
+
+    function isAdminOf(storeId) {
+      return claimRole() == 'admin' && inStore(storeId);
+    }
+
+    function isKasirOf(storeId) {
+      return claimRole() == 'kasir' && inStore(storeId);
+    }
+
+    // Admin atau kasir toko tsb (admin juga boleh mencatat transaksi).
+    function isStaffOf(storeId) {
+      return isAdminOf(storeId) || isKasirOf(storeId);
+    }
+
+    // Field yang berubah pada update (untuk create: semua field dokumen baru).
+    function changedKeys() {
+      return resource == null
+          ? request.resource.data.keys()
+          : request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ---------- users ----------
+    // Baca diri sendiri (superadmin: semua). Tulis hanya lewat Cloud Function.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
+      allow write: if false;
+    }
+
+    // ---------- stores ----------
+    // isActive hanya boleh diubah Cloud Function (agar claims ikut dicabut).
+    match /stores/{storeId} {
+      allow read: if isSuperadmin() || inStore(storeId);
+
+      allow create: if isSuperadmin()
+          && request.resource.data.isActive is bool;
+
+      allow update: if
+          (isSuperadmin()
+              && request.resource.data.isActive == resource.data.isActive)
+          || (isAdminOf(storeId)
+              && changedKeys().hasOnly([
+                'receiptHeader', 'receiptFooter', 'taxPercent', 'scanEnabled',
+                'printerName', 'printerPaperMm', 'updatedAt'
+              ]));
+
+      allow delete: if false;
+
+      // ---------- categories ----------
+      match /categories/{categoryId} {
+        allow read: if isSuperadmin() || inStore(storeId);
+        allow write: if isAdminOf(storeId);
+      }
+
+      // ---------- products ----------
+      // Hapus produk = isActive:false, jadi dokumen tidak pernah dihapus.
+      // Kasir hanya boleh MENURUNKAN stok (penjualan); menaikkan stok (void,
+      // stok masuk) hanya admin.
+      match /products/{productId} {
+        allow read: if isSuperadmin() || inStore(storeId);
+        allow create: if isAdminOf(storeId);
+        allow update: if isAdminOf(storeId)
+            || (isKasirOf(storeId)
+                && changedKeys().hasOnly(['stock', 'updatedAt'])
+                && request.resource.data.stock <= resource.data.stock);
+        allow delete: if false;
+      }
+
+      // ---------- transactions ----------
+      // Kasir hanya melihat transaksinya sendiri. Void: kasir hanya MENGAJUKAN
+      // (field voidRequest, sekali); admin yang mengubah status menjadi 'void'.
+      match /transactions/{trxId} {
+        allow read: if isSuperadmin()
+            || isAdminOf(storeId)
+            || (isKasirOf(storeId) && resource.data.cashierId == request.auth.uid);
+
+        allow create: if isStaffOf(storeId)
+            && request.resource.data.cashierId == request.auth.uid
+            && request.resource.data.status == 'paid'
+            && request.resource.data.keys().hasAll([
+              'receiptNo', 'cashierId', 'items', 'total', 'paymentMethod', 'status'
+            ]);
+
+        allow update:
+            // Admin menyetujui void; transaksi yang sudah void tidak bisa diubah lagi.
+            if (isAdminOf(storeId)
+                && resource.data.status == 'paid'
+                && changedKeys().hasOnly([
+                  'status', 'voidReason', 'voidBy', 'voidRequest', 'updatedAt'
+                ])
+                && (request.resource.data.status == 'paid'
+                    || (request.resource.data.status == 'void'
+                        && request.resource.data.voidBy == request.auth.uid)))
+            // Kasir mengajukan void atas transaksinya sendiri, hanya sekali.
+            || (isKasirOf(storeId)
+                && resource.data.cashierId == request.auth.uid
+                && resource.data.status == 'paid'
+                && !('voidRequest' in resource.data)
+                && changedKeys().hasOnly(['voidRequest'])
+                && request.resource.data.voidRequest.requestedBy == request.auth.uid);
+
+        allow delete: if false;
+      }
+
+      // ---------- daily_summaries ----------
+      // Kasir TULIS-SAJA (increment tidak butuh izin baca) dan tidak boleh
+      // menyentuh totalExpense. Admin/superadmin membaca untuk grafik & laporan.
+      match /daily_summaries/{day} {
+        allow read: if isSuperadmin() || isAdminOf(storeId);
+
+        allow create, update:
+            if (isAdminOf(storeId)
+                && changedKeys().hasOnly([
+                  'date', 'grossSales', 'totalCost', 'totalExpense', 'discount',
+                  'tax', 'txCount', 'voidCount', 'byPayment', 'updatedAt'
+                ]))
+            || (isKasirOf(storeId)
+                && changedKeys().hasOnly([
+                  'date', 'grossSales', 'totalCost', 'discount', 'tax',
+                  'txCount', 'voidCount', 'byPayment', 'updatedAt'
+                ]));
+
+        allow delete: if false;
+      }
+
+      // ---------- expenses ----------
+      match /expenses/{expenseId} {
+        allow read: if isSuperadmin() || isAdminOf(storeId);
+        allow create: if isAdminOf(storeId)
+            && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if isAdminOf(storeId);
+      }
+
+      // ---------- stock_movements (jejak, tidak bisa diubah) ----------
+      match /stock_movements/{moveId} {
+        allow read: if isSuperadmin() || isAdminOf(storeId);
+        allow create: if isStaffOf(storeId)
+            && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // ---------- shifts (P3) ----------
+      match /shifts/{shiftId} {
+        allow read: if isSuperadmin()
+            || isAdminOf(storeId)
+            || (isKasirOf(storeId) && resource.data.cashierId == request.auth.uid);
+        allow create: if isStaffOf(storeId)
+            && request.resource.data.cashierId == request.auth.uid;
+        allow update: if isStaffOf(storeId)
+            && resource.data.cashierId == request.auth.uid;
+        allow delete: if false;
+      }
+
+      // ---------- activity_logs & weekly_reports (ditulis Cloud Functions) ----------
+      match /activity_logs/{logId} {
+        allow read: if isSuperadmin() || isAdminOf(storeId);
+        allow write: if false;
+      }
+
+      match /weekly_reports/{weekId} {
+        allow read: if isSuperadmin() || isAdminOf(storeId);
+        allow write: if false;
+      }
+    }
+
+    // Ringkasan semua toko untuk superadmin (collection group query, PRD F-25).
+    match /{path=**}/daily_summaries/{day} {
+      allow read: if isSuperadmin();
+    }
+  }
+}

@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Foto produk dan bukti pengeluaran disimpan di stores/{storeId}/...
+// Aturan memakai custom claims `role` dan `storeIds` (diset Cloud Function).
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Catatan: untuk user tanpa claims, `role` tidak terdefinisi sehingga evaluasi
+    // error dan akses DITOLAK (perilaku yang diinginkan). Emulator mencetak
+    // peringatan "Property role is undefined" untuk kasus itu; itu normal.
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function isSuperadmin() {
+      return signedIn() && role() == 'superadmin';
+    }
+
+    function inStore(storeId) {
+      return signedIn()
+          && role() in ['admin', 'kasir']
+          && storeId in request.auth.token.storeIds;
+    }
+
+    function isAdminOf(storeId) {
+      return inStore(storeId) && role() == 'admin';
+    }
+
+    // Hanya gambar, maksimal 5 MB.
+    function validImage() {
+      return request.resource.size < 5 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+    }
+
+    match /stores/{storeId}/{allPaths=**} {
+      allow read: if isSuperadmin() || inStore(storeId);
+      allow write: if isAdminOf(storeId) && validImage();
+      allow delete: if isAdminOf(storeId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

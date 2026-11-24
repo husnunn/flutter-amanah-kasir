@@ -53,3 +53,17 @@ app.*.map.json
 
 # Harness tinjauan visual sementara
 test/_shots_test.dart
+
+# Firebase / Node
+node_modules/
+.firebase/
+firebase-debug.log*
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+*-debug.log
+# Kunci service account JANGAN di-commit
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+.env
+.env.*
