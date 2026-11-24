@@ -15,6 +15,7 @@ class DashboardScreen extends StatefulWidget {
     super.key,
     this.storeName = 'Toko Berkah Jaya',
     this.storeCount = 3,
+    this.userName = 'Sari Ayu',
     this.initialPeriod,
     this.onNavigate,
     this.onSwitchStore,
@@ -23,6 +24,7 @@ class DashboardScreen extends StatefulWidget {
 
   final String storeName;
   final int storeCount;
+  final String userName;
 
   /// Periode awal; null = Bulan di tablet, Minggu di HP (seperti desain).
   final ReportPeriod? initialPeriod;
@@ -57,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onPeriod: (p) => setState(() => _period = p),
           storeName: widget.storeName,
           storeCount: widget.storeCount,
+          userName: widget.userName,
           lowStock: sampleLowStock,
           onNavigate: _navigate,
           onSwitchStore: widget.onSwitchStore,
@@ -70,6 +73,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           period: period,
           onPeriod: (p) => setState(() => _period = p),
           storeName: widget.storeName,
+          userName: widget.userName,
           lowStock: sampleLowStock,
           onNavigate: _navigate,
           onSwitchStore: widget.onSwitchStore,

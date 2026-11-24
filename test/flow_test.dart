@@ -1,5 +1,7 @@
 import 'package:amanah_kasir/app/app.dart';
 import 'package:amanah_kasir/app/app_router.dart';
+import 'package:amanah_kasir/core/firebase/firebase_bootstrap.dart';
+import 'package:amanah_kasir/features/auth/presentation/setup_needed_screen.dart';
 import 'package:amanah_kasir/features/kasir/presentation/widgets/product_card.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -97,5 +99,22 @@ void main() {
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
     expect(find.text('Kasir untuk\nsemua toko Anda'), findsOneWidget);
+  });
+
+  testWidgets('Firebase belum dikonfigurasi menampilkan panduan setup', (
+    tester,
+  ) async {
+    await tester.runAsync(loadAppFonts);
+    tester.view.physicalSize = Screens.phone;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const AmanahKasirApp(firebaseStatus: FirebaseStatus.notConfigured),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SetupNeededScreen), findsOneWidget);
+    expect(find.text('Firebase belum disiapkan'), findsOneWidget);
+    expect(find.textContaining('USE_EMULATOR'), findsOneWidget);
   });
 }

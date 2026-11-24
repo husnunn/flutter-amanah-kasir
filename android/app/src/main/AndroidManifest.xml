@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Firebase (Auth, Firestore, Functions) butuh jaringan pada build release. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Amanah Kasir"
         android:name="${applicationName}"

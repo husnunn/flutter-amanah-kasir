@@ -26,6 +26,7 @@ class AppTextField extends StatelessWidget {
     this.readOnly = false,
     this.onTap,
     this.onChanged,
+    this.onSubmitted,
     this.autofillHints,
   });
 
@@ -44,6 +45,7 @@ class AppTextField extends StatelessWidget {
   final bool readOnly;
   final VoidCallback? onTap;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final Iterable<String>? autofillHints;
 
   @override
@@ -65,6 +67,7 @@ class AppTextField extends StatelessWidget {
           readOnly: readOnly,
           onTap: onTap,
           onChanged: onChanged,
+          onFieldSubmitted: onSubmitted,
           style: dense ? context.text.bodyMedium : context.text.bodyLarge,
           decoration: appInputDecoration(
             context,

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/coming_soon.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../admin/presentation/admin_nav.dart';
 import '../data/dashboard_data.dart';
@@ -17,6 +18,7 @@ class DashboardPhoneView extends StatelessWidget {
     required this.period,
     required this.onPeriod,
     required this.storeName,
+    required this.userName,
     required this.lowStock,
     required this.onNavigate,
     this.onSwitchStore,
@@ -26,6 +28,7 @@ class DashboardPhoneView extends StatelessWidget {
   final ReportPeriod period;
   final ValueChanged<ReportPeriod> onPeriod;
   final String storeName;
+  final String userName;
   final List<LowStockItem> lowStock;
   final ValueChanged<AdminDestination> onNavigate;
   final VoidCallback? onSwitchStore;
@@ -59,8 +62,8 @@ class DashboardPhoneView extends StatelessWidget {
                             onTap: onSwitchStore,
                           ),
                         ),
-                        const InitialAvatar(
-                          'SA',
+                        InitialAvatar(
+                          initialsOf(userName),
                           avatarStyle: AvatarStyle.outlined,
                         ),
                       ],

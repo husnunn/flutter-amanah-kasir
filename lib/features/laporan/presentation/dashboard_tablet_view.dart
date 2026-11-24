@@ -18,6 +18,7 @@ class DashboardTabletView extends StatelessWidget {
     required this.onPeriod,
     required this.storeName,
     required this.storeCount,
+    required this.userName,
     required this.lowStock,
     required this.onNavigate,
     this.onSwitchStore,
@@ -29,6 +30,7 @@ class DashboardTabletView extends StatelessWidget {
   final ValueChanged<ReportPeriod> onPeriod;
   final String storeName;
   final int storeCount;
+  final String userName;
   final List<LowStockItem> lowStock;
   final ValueChanged<AdminDestination> onNavigate;
   final VoidCallback? onSwitchStore;
@@ -45,6 +47,7 @@ class DashboardTabletView extends StatelessWidget {
             onNavigate: onNavigate,
             storeName: storeName,
             storeCount: storeCount,
+            userName: userName,
             onSwitchStore: onSwitchStore,
             onLogout: onLogout,
           ),

@@ -2,22 +2,27 @@ import '../../../core/theme/theme.dart';
 
 /// Toko yang bisa dipilih admin setelah login.
 class StoreOption {
+  /// [id] = id dokumen toko di Firestore; bila kosong memakai [code].
   const StoreOption({
+    String? id,
     required this.code,
     required this.name,
     required this.area,
-    required this.kasirLabel,
-    required this.salesToday,
+    this.kasirLabel,
+    this.salesToday,
     required this.tone,
     this.syncLabel = 'Tersinkron',
     this.online = true,
-  });
+  }) : id = id ?? code;
 
+  final String id;
   final String code;
   final String name;
   final String area;
-  final String kasirLabel;
-  final int salesToday;
+
+  /// Opsional: belum tersedia dari dokumen toko, disembunyikan bila null.
+  final String? kasirLabel;
+  final int? salesToday;
   final ToneName tone;
   final String syncLabel;
   final bool online;

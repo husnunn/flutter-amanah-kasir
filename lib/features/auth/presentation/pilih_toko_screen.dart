@@ -126,6 +126,10 @@ class _StoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
+    final subtitle = [
+      store.area,
+      store.kasirLabel,
+    ].whereType<String>().where((part) => part.isNotEmpty).join(' · ');
     return Semantics(
       inMutuallyExclusiveGroup: true,
       checked: selected,
@@ -151,36 +155,38 @@ class _StoreCard extends StatelessWidget {
                 spacing: AppSpacing.xxs,
                 children: [
                   Text(store.name, style: text.titleSmall),
-                  Text(
-                    '${store.area} · ${store.kasirLabel}',
-                    style: text.labelMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: text.labelMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.xxs),
                     child: Wrap(
                       spacing: AppSpacing.md,
                       children: [
-                        Text.rich(
-                          TextSpan(
-                            text: 'Hari ini ',
-                            children: [
-                              TextSpan(
-                                text: formatRupiah(store.salesToday),
-                                style: text.labelMedium?.copyWith(
-                                  color: colors.onSurface,
-                                  fontWeight: FontWeight.w700,
+                        if (store.salesToday != null)
+                          Text.rich(
+                            TextSpan(
+                              text: 'Hari ini ',
+                              children: [
+                                TextSpan(
+                                  text: formatRupiah(store.salesToday!),
+                                  style: text.labelMedium?.copyWith(
+                                    color: colors.onSurface,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            style: text.labelMedium?.copyWith(
+                              color: context.app.ink3,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          style: text.labelMedium?.copyWith(
-                            color: context.app.ink3,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
                         Text(
                           store.syncLabel,
                           style: text.labelMedium?.copyWith(

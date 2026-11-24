@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 
 /// Tujuan menu admin (urutan sama dengan [adminSidebarItems]).
@@ -50,6 +51,7 @@ class AdminSidebar extends StatelessWidget {
     required this.onNavigate,
     this.storeName = 'Toko Berkah Jaya',
     this.storeCount = 3,
+    this.userName = 'Sari Ayu',
     this.onSwitchStore,
     this.onLogout,
   });
@@ -58,6 +60,7 @@ class AdminSidebar extends StatelessWidget {
   final ValueChanged<AdminDestination> onNavigate;
   final String storeName;
   final int storeCount;
+  final String userName;
   final VoidCallback? onSwitchStore;
   final VoidCallback? onLogout;
 
@@ -72,9 +75,9 @@ class AdminSidebar extends StatelessWidget {
         storeCount: storeCount,
         onTap: onSwitchStore,
       ),
-      userName: 'Sari Ayu',
+      userName: userName,
       userRole: 'Admin',
-      userInitials: 'SA',
+      userInitials: initialsOf(userName),
       onLogout: onLogout,
     );
   }

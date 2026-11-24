@@ -22,6 +22,7 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.size = AppButtonSize.large,
     this.expand = true,
+    this.isLoading = false,
   });
 
   final String label;
@@ -30,6 +31,9 @@ class AppButton extends StatelessWidget {
   final AppButtonVariant variant;
   final AppButtonSize size;
   final bool expand;
+
+  /// Menampilkan indikator dan mengabaikan tekanan (tampilan tombol tetap aktif).
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -48,22 +52,40 @@ class AppButton extends StatelessWidget {
     final padding = EdgeInsets.symmetric(
       horizontal: size == AppButtonSize.large ? AppSpacing.xl : AppSpacing.md,
     );
-    final child = Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: AppSpacing.xs,
-      children: [
-        if (icon != null) AppIcon(icon!, size: AppSize.iconMd),
-        Flexible(
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ),
-      ],
-    );
+    final loadingColor = switch (variant) {
+      AppButtonVariant.primary => context.colors.onPrimary,
+      AppButtonVariant.secondary => context.app.ink2,
+      AppButtonVariant.destructive => context.colors.error,
+    };
+    final child = isLoading
+        ? SizedBox.square(
+            dimension: AppSize.iconMd,
+            child: CircularProgressIndicator(
+              strokeWidth: AppSize.borderThick,
+              color: loadingColor,
+            ),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: AppSpacing.xs,
+            children: [
+              if (icon != null) AppIcon(icon!, size: AppSize.iconMd),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          );
+    final pressed = isLoading ? () {} : onPressed;
     final minimumSize = Size(expand ? double.infinity : 64, height);
     final textStyle = base?.copyWith(fontWeight: weight);
 
     return switch (variant) {
       AppButtonVariant.primary => FilledButton(
-        onPressed: onPressed,
+        onPressed: pressed,
         style: FilledButton.styleFrom(
           minimumSize: minimumSize,
           padding: padding,
@@ -72,7 +94,7 @@ class AppButton extends StatelessWidget {
         child: child,
       ),
       AppButtonVariant.secondary => OutlinedButton(
-        onPressed: onPressed,
+        onPressed: pressed,
         style: OutlinedButton.styleFrom(
           minimumSize: minimumSize,
           padding: padding,
@@ -81,7 +103,7 @@ class AppButton extends StatelessWidget {
         child: child,
       ),
       AppButtonVariant.destructive => OutlinedButton(
-        onPressed: onPressed,
+        onPressed: pressed,
         style: OutlinedButton.styleFrom(
           minimumSize: minimumSize,
           padding: padding,

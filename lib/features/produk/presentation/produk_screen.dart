@@ -18,6 +18,7 @@ class ProdukScreen extends StatefulWidget {
     this.initialSelectedId = 'telur',
     this.storeName = 'Toko Berkah Jaya',
     this.storeCount = 3,
+    this.userName = 'Sari Ayu',
     this.onNavigate,
     this.onSwitchStore,
   });
@@ -26,6 +27,7 @@ class ProdukScreen extends StatefulWidget {
   final String? initialSelectedId;
   final String storeName;
   final int storeCount;
+  final String userName;
   final ValueChanged<AdminDestination>? onNavigate;
   final VoidCallback? onSwitchStore;
 
@@ -93,6 +95,7 @@ class _ProdukScreenState extends State<ProdukScreen> {
               onNavigate: _navigate,
               storeName: widget.storeName,
               storeCount: widget.storeCount,
+              userName: widget.userName,
               onSwitchStore: widget.onSwitchStore,
             ),
             Expanded(
