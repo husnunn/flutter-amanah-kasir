@@ -77,7 +77,7 @@ Pada HP fisik, pastikan firewall komputer tidak memblokir port 9099, 8080, dan 5
 
 | Email | Peran | Yang seharusnya terjadi |
 | --- | --- | --- |
-| `superadmin@amanah.test` | Superadmin | Masuk ke layar Toko & pengguna |
+| `superadmin@amanah.test` | Superadmin | Masuk ke layar Toko & pengguna (tambah, ubah, nonaktifkan toko dan pengguna) |
 | `admin@amanah.test` | Admin 3 toko | Layar **Pilih toko** (hanya 2 toko aktif; TK03 nonaktif), lalu Dashboard |
 | `admin1@amanah.test` | Admin 1 toko | Langsung Dashboard |
 | `kasir@amanah.test` | Kasir | Langsung layar Kasir |
@@ -88,8 +88,9 @@ Pada HP fisik, pastikan firewall komputer tidak memblokir port 9099, 8080, dan 5
 Coba juga password salah dan **Lupa password?** (di emulator, tautan reset tidak
 dikirim lewat email; lihat tautannya di panel emulator, tab Authentication).
 
-> Layar setelah login (Kasir, Dashboard, Produk, dst.) **masih memakai data contoh**.
-> Yang sudah sungguhan: login, peran, nama pengguna, dan nama toko.
+> Layar Kasir, Dashboard, Produk, dst. **masih memakai data contoh**. Yang sudah
+> sungguhan: login, peran, nama pengguna, nama toko, dan layar superadmin
+> **Toko & pengguna** (data dan perubahannya tersimpan di emulator).
 
 Hentikan emulator dengan `Ctrl+C`. Data emulator hilang saat berhenti, jalankan
 skrip seed lagi bila perlu.
@@ -126,9 +127,10 @@ biasanya masih di dalam kuota gratis).
 1. Di console: **Upgrade** (kiri bawah) dan ikuti langkahnya.
 2. **Pasang budget alert** agar tidak ada kejutan: Google Cloud Console > **Billing > Budgets & alerts > Create budget**, mis. Rp 100.000/bulan dengan peringatan di 50% dan 100%.
 
-Belum mau upgrade? Lewati Langkah 8. Anda tetap bisa login dan membuat
-pengguna lewat skrip (Langkah 9); hanya fungsi `upsertUser`, `setUserActive`,
-dan `setStoreActive` yang belum aktif.
+Belum mau upgrade? Lewati Langkah 8. Anda tetap bisa login dan membuat toko serta
+pengguna lewat skrip (Langkah 9 dan 10). Yang belum aktif adalah **kelola toko dan
+pengguna dari dalam aplikasi**, karena itu memakai fungsi `upsertStore`,
+`setStoreActive`, `upsertUser`, dan `setUserActive`.
 
 ### Langkah 5. Pasang dan login CLI
 
@@ -198,9 +200,19 @@ password (minimal 8 karakter).
 
 ### Langkah 10. Buat toko dan pengguna pertama
 
-Sampai layar kelola pengguna di aplikasi selesai, buat lewat skrip (kunci
-service account yang sama, tambahkan `GOOGLE_APPLICATION_CREDENTIALS=...` di depan
-tiap perintah). Toko dulu:
+**Cara utama: dari aplikasi.** Masuk sebagai superadmin (Langkah 9), lalu:
+
+- menu **Toko > Tambah toko**: isi nama, kode (mis. `TK01`), alamat, telepon;
+- menu **Pengguna > Tambah pengguna** (atau tombol **Tambah pengguna** di panel
+  toko): isi nama, email, peran (Kasir, Admin, atau Superadmin) dan tokonya.
+
+Password pengguna baru **dibuat otomatis dan hanya tampil sekali**. Salin dan
+berikan kepada yang bersangkutan. Bila terlewat, pilih pengguna itu lalu
+**Kirim tautan reset password**. Cara ini butuh Cloud Functions aktif (Langkah 8).
+
+**Cara cadangan: lewat skrip** (tanpa Cloud Functions; kunci service account yang
+sama, tambahkan `GOOGLE_APPLICATION_CREDENTIALS=...` di depan tiap perintah).
+Toko dulu:
 
 ```bash
 node functions/scripts/provision.mjs store --project ID-PROJECT --id tk01 --code TK01 --name "Toko Berkah Jaya" --address "Jl. Contoh No. 1, Surabaya"
@@ -215,6 +227,17 @@ node functions/scripts/provision.mjs user --project ID-PROJECT --email admin@con
 ```bash
 node functions/scripts/provision.mjs user --project ID-PROJECT --email kasir@contoh.com --name "Rina Wati" --role kasir --stores tk01
 ```
+
+**Sudah punya toko dari versi sebelumnya?** Toko yang dibuat sebelum fungsi
+`upsertStore` ada belum terdaftar di daftar kode unik, jadi kodenya masih bisa
+dipakai ulang oleh toko baru. Jalankan sekali:
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=~/rahasia/amanah-kasir-admin.json node functions/scripts/backfill-store-codes.mjs --project ID-PROJECT
+```
+
+Skrip ini aman diulang. Bila ada dua toko berkode sama, skrip melaporkannya
+tanpa mengubah apa pun; ubah salah satu kodenya lebih dulu lalu jalankan lagi.
 
 ### Langkah 11. Jalankan aplikasi
 
@@ -234,6 +257,17 @@ Login dengan salah satu akun tadi. Selesai.
   tidak bisa dipalsukan dari aplikasi.
 - Sumber kebenarannya dokumen `users/{uid}`. Claims dihitung ulang dari dokumen
   itu setiap kali user atau toko diubah.
+- Toko **tidak ditulis langsung** dari aplikasi. Pembuatan dan perubahan toko
+  lewat fungsi `upsertStore`, penonaktifan lewat `setStoreActive` (Security Rules
+  menolak tulis langsung dari klien). Alasannya: kode toko dipakai di nomor nota
+  dan harus unik, sedangkan Firestore Rules tidak bisa menjamin keunikan. Fungsi
+  memakai dokumen `store_codes/{KODE}` di dalam transaksi. Kode **tidak bisa
+  diubah** setelah toko dibuat. Yang tetap bisa diubah admin toko dari aplikasi:
+  header/footer nota, pajak, dan pengaturan printer.
+- Pengguna dikelola lewat `upsertUser` dan `setUserActive`. Hanya menonaktifkan;
+  tidak ada hapus permanen. Akun sendiri tidak bisa dinonaktifkan.
+- Admin menambah kasir sendiri **belum diaktifkan** (`ADMIN_CAN_MANAGE_KASIR`
+  di `functions/src/claims.js`, pertanyaan terbuka di PRD).
 - Menonaktifkan user/toko: claims dicabut dan refresh token di-revoke. Perubahan
   terasa paling lambat saat token berikutnya diperbarui (maksimal ± 1 jam).
 - Aplikasi memeriksa ulang dokumen `users/{uid}` dan status toko setiap sesi
@@ -268,6 +302,10 @@ cd functions && npm test
 | `CLEARTEXT communication ... not permitted` | Hanya terjadi di build release. Mode emulator hanya untuk build debug (manifest debug sudah mengizinkan HTTP). |
 | Tidak bisa terhubung ke emulator dari HP fisik | Pakai `--dart-define=EMULATOR_HOST=<IP LAN komputer>`, satu Wi-Fi, dan izinkan port 9099/8080/5001 di firewall. |
 | "Akun Anda belum diberi peran" | Akun dibuat manual di console tanpa claims. Buat ulang lewat `provision.mjs`, atau jalankan `create-superadmin.mjs` untuk superadmin. |
+| Layar "Dirancang untuk tablet" saat masuk sebagai superadmin | Layar Toko & pengguna hanya untuk lebar >= 900 dp. Pakai tablet, atau putar ke landscape. Ponsel potret tidak mendapat tata letak ini. |
+| "Kode toko ... sudah dipakai" saat menambah toko | Kode harus unik (huruf besar/kecil dianggap sama). Pilih kode lain; kode toko tidak bisa diubah setelah dibuat. |
+| Password pengguna baru terlewat dicatat | Password hanya tampil sekali. Pilih pengguna di menu Pengguna lalu **Kirim tautan reset password**. |
+| Tombol simpan di form toko/pengguna gagal dengan "Fungsi tidak ditemukan" atau tidak ada koneksi | Cloud Functions belum di-deploy (Langkah 8, butuh Blaze) atau emulator Functions tidak jalan. |
 | `permission-denied` setelah peran diubah | Token lama belum memuat claims baru. Keluar lalu masuk lagi. |
 | Fungsi tidak ditemukan / salah region | Klien dan fungsi harus di `asia-southeast2` (`AppEnv.functionsRegion` dan `setGlobalOptions` di `functions/index.js`). |
 | `flutterfire: command not found` | Tambahkan `~/.pub-cache/bin` ke `PATH`. |

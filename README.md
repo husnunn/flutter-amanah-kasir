@@ -67,7 +67,7 @@ lib/
     auth/     repositori Firebase, state Riverpod, Login, AuthGate per peran
     kasir/  produk/  keuangan/  laporan/  superadmin/  admin/
 firestore.rules  storage.rules  firebase.json   aturan keamanan dan konfigurasi emulator
-functions/       Cloud Functions (upsertUser, setUserActive, setStoreActive) + skrip
+functions/       Cloud Functions (upsertStore, setStoreActive, upsertUser, setUserActive) + skrip
 firebase-tests/  tes Security Rules dan smoke test di emulator
 docs/            panduan setup Firebase
 assets/fonts/    Plus Jakarta Sans (SIL OFL 1.1)
@@ -82,6 +82,9 @@ Aturan kode: warna, ukuran font, dan spasi hanya berasal dari `core/theme`
   `package:material_ui/material_ui.dart`, bukan `package:flutter/material.dart`.
 - Hanya tema terang; dark mode belum ada di desain.
 - Kunci service account Firebase **tidak boleh** di-commit (sudah masuk `.gitignore`).
+- Superadmin sudah bisa mengelola toko dan pengguna dari aplikasi (tambah, ubah,
+  nonaktifkan; password pengguna baru dibuat otomatis dan tampil sekali). Layar
+  superadmin hanya untuk tablet (lebar >= 900 dp).
 - Layar yang belum didesain (riwayat transaksi, void, laporan mingguan,
-  pengaturan toko/printer, form tambah toko dan pengguna) menampilkan snackbar
-  "segera hadir".
+  pengaturan toko/printer, ringkasan lintas toko, pengaturan aplikasi)
+  menampilkan snackbar "segera hadir".
