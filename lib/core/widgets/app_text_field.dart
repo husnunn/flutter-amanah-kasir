@@ -28,6 +28,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.autofillHints,
+    this.errorText,
   });
 
   final String? label;
@@ -47,6 +48,9 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final Iterable<String>? autofillHints;
+
+  /// Pesan kesalahan di bawah field; garis berubah merah.
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +79,7 @@ class AppTextField extends StatelessWidget {
             hint: hint,
             leading: leading,
             trailing: trailing,
+            errorText: errorText,
           ),
         ),
       ],

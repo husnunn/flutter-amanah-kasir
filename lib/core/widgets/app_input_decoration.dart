@@ -12,6 +12,7 @@ InputDecoration appInputDecoration(
   String? hint,
   AppIconData? leading,
   Widget? trailing,
+  String? errorText,
 }) {
   final colors = context.colors;
   final app = context.app;
@@ -24,6 +25,8 @@ InputDecoration appInputDecoration(
 
   return InputDecoration(
     hintText: hint,
+    errorText: errorText,
+    errorMaxLines: 2,
     isDense: dense,
     constraints: BoxConstraints(
       minHeight: dense ? AppSize.fieldDense : AppSize.field,
@@ -47,6 +50,8 @@ InputDecoration appInputDecoration(
     border: border(app.borderInput),
     enabledBorder: border(app.borderInput),
     focusedBorder: border(colors.primary, AppSize.borderMedium),
+    errorBorder: border(colors.error),
+    focusedErrorBorder: border(colors.error, AppSize.borderMedium),
   );
 }
 
@@ -77,6 +82,7 @@ class AppDropdownField<T> extends StatelessWidget {
     required this.onChanged,
     this.itemLabel,
     this.dense = false,
+    this.errorText,
   });
 
   final String label;
@@ -85,6 +91,7 @@ class AppDropdownField<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
   final String Function(T)? itemLabel;
   final bool dense;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +107,11 @@ class AppDropdownField<T> extends StatelessWidget {
           icon: const AppIcon(AppIcons.chevronDown, size: AppSize.iconMd),
           borderRadius: AppRadius.mdAll,
           style: dense ? context.text.bodyMedium : context.text.bodyLarge,
-          decoration: appInputDecoration(context, dense: dense),
+          decoration: appInputDecoration(
+            context,
+            dense: dense,
+            errorText: errorText,
+          ),
           items: [
             for (final item in items)
               DropdownMenuItem<T>(

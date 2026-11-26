@@ -86,6 +86,11 @@ abstract final class AppLayout {
   static const double filtersOneRow = 560;
   static const double keypad = 300;
   static const double editPanel = 340;
+  static const double dialogWidth = 480;
+
+  /// Tinggi minimal halaman kelola toko/pengguna; lebih pendek dari ini (mis.
+  /// ponsel landscape) halaman digulir.
+  static const double managementMinHeight = 620;
   static const double sideColumn = 320;
   static const double bottomNav = 68;
   static const double loginHero = 300;

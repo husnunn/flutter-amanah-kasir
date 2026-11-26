@@ -1,5 +1,7 @@
 import 'package:amanah_kasir/core/theme/theme.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -28,12 +30,14 @@ class Screens {
 }
 
 /// Menampilkan [home] dalam MaterialApp bertema aplikasi pada [size].
-/// Overflow/exception layout otomatis menggagalkan tes.
+/// Overflow/exception layout otomatis menggagalkan tes. [overrides] menimpa
+/// provider Riverpod (mis. repositori contoh).
 Future<void> pumpApp(
   WidgetTester tester,
   Widget home, {
   Size size = Screens.phone,
   double textScale = 1,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -42,7 +46,12 @@ Future<void> pumpApp(
     tester.view.reset();
     tester.platformDispatcher.clearTextScaleFactorTestValue();
   });
-  await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: home));
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(theme: AppTheme.light(), home: home),
+    ),
+  );
   await tester.pump(const Duration(milliseconds: 300));
 }
 
@@ -51,12 +60,19 @@ Future<void> pumpRoute(
   WidgetTester tester,
   Route<void> route, {
   Size size = Screens.tablet,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(theme: AppTheme.light(), onGenerateRoute: (_) => route),
+    ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        theme: AppTheme.light(),
+        onGenerateRoute: (_) => route,
+      ),
+    ),
   );
   await tester.pump(const Duration(milliseconds: 300));
 }
