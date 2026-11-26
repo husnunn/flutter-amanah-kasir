@@ -73,6 +73,25 @@ const _monthNames = [
   'Desember',
 ];
 
+const _monthShort = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mei',
+  'Jun',
+  'Jul',
+  'Agu',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Des',
+];
+
+/// DateTime(2026, 11, 2) -> "2 Nov 2026".
+String formatDateShort(DateTime d) =>
+    '${d.day} ${_monthShort[d.month - 1]} ${d.year}';
+
 /// DateTime(2026, 11, 24) -> "Selasa, 24 November 2026".
 String formatDateLong(DateTime d) =>
     '${_dayNames[d.weekday - 1]}, ${d.day} ${_monthNames[d.month - 1]} ${d.year}';

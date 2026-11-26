@@ -12,10 +12,18 @@ class StoreDetailPanel extends StatelessWidget {
     super.key,
     required this.store,
     required this.onToggleActive,
+    required this.onAddUser,
+    this.busy = false,
   });
 
   final StoreRecord store;
-  final ValueChanged<bool> onToggleActive;
+
+  /// Null = sakelar tidak bisa diubah.
+  final ValueChanged<bool>? onToggleActive;
+  final VoidCallback onAddUser;
+
+  /// Status sedang diubah; sakelar dikunci sampai selesai.
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -54,8 +62,14 @@ class StoreDetailPanel extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${store.area} · dibuat ${store.createdLabel}',
+                      [
+                        if (store.area.isNotEmpty) store.area,
+                        if (store.createdLabel != null)
+                          'dibuat ${store.createdLabel}',
+                      ].join(' · '),
                       style: muted,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -81,7 +95,10 @@ class StoreDetailPanel extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  Switch(value: store.active, onChanged: onToggleActive),
+                  Switch(
+                    value: store.active,
+                    onChanged: busy ? null : onToggleActive,
+                  ),
                 ],
               ),
             ),
@@ -92,7 +109,9 @@ class StoreDetailPanel extends StatelessWidget {
           ),
           _InfoRow(
             label: 'Transaksi bulan ini',
-            value: formatNumber(store.transactionsThisMonth),
+            value: store.transactionsThisMonth == null
+                ? '—'
+                : formatNumber(store.transactionsThisMonth!),
           ),
           const Divider(),
           Row(
@@ -114,7 +133,7 @@ class StoreDetailPanel extends StatelessWidget {
                   return DashedBorderBox(
                     radius: AppRadius.mdAll,
                     background: colors.surface,
-                    onTap: () => showComingSoon(context, 'Tambah pengguna'),
+                    onTap: onAddUser,
                     child: SizedBox(
                       height: AppSize.buttonSmall,
                       child: Row(
@@ -200,10 +219,14 @@ class _UserRow extends StatelessWidget {
             children: [
               Text(
                 user.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
                 user.note,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: text.labelMedium?.copyWith(
                   color: context.colors.onSurfaceVariant,
                   fontWeight: FontWeight.w500,

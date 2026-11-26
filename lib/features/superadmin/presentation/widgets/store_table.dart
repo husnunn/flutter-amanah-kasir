@@ -10,12 +10,12 @@ class StoreTable extends StatelessWidget {
   const StoreTable({
     super.key,
     required this.stores,
-    required this.selectedCode,
+    required this.selectedId,
     required this.onSelect,
   });
 
   final List<StoreRecord> stores;
-  final String? selectedCode;
+  final String? selectedId;
   final ValueChanged<StoreRecord> onSelect;
 
   static const int _flexStore = 5;
@@ -65,7 +65,7 @@ class StoreTable extends StatelessWidget {
                     itemCount: stores.length,
                     itemBuilder: (context, i) => _StoreRow(
                       store: stores[i],
-                      selected: stores[i].code == selectedCode,
+                      selected: stores[i].id == selectedId,
                       onTap: () => onSelect(stores[i]),
                     ),
                   ),
@@ -138,6 +138,8 @@ class _StoreRow extends StatelessWidget {
                               ),
                               Text(
                                 store.area,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: text.labelMedium?.copyWith(
                                   color: colors.onSurfaceVariant,
                                   fontWeight: FontWeight.w500,
@@ -153,6 +155,8 @@ class _StoreRow extends StatelessWidget {
                     flex: StoreTable._flexAdmin,
                     child: Text(
                       store.admin,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: text.bodySmall?.copyWith(color: context.app.ink2),
                     ),
                   ),

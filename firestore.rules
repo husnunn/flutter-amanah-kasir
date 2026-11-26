@@ -1,10 +1,16 @@
 rules_version = '2';
 
-// Security Rules Amanah Kasir (multi-toko).
+// Security Rules Amanah Kasir (multi-toko), tanpa Cloud Functions (paket Spark).
 //
-// Identitas dibaca dari custom claims di ID token, diset Cloud Function:
+// Identitas dibaca dari dokumen `users/{uid}` (sumber kebenaran tunggal), BUKAN
+// dari custom claims:
 //   role     : 'superadmin' | 'admin' | 'kasir'
-//   storeIds : daftar toko AKTIF milik user (kasir tepat 1, admin >= 1, superadmin kosong)
+//   storeIds : toko milik user (kasir tepat 1, admin >= 1, superadmin kosong)
+//   isActive : false = seluruh akses dicabut seketika
+// Toko yang `isActive: false` juga menutup akses operasional ke toko itu.
+//
+// Biaya: tiap permintaan membaca dokumen user (dan dokumen toko bila perlu)
+// lewat get(); keduanya dihitung sebagai pembacaan dokumen biasa.
 //
 // Prinsip:
 // - Satu `match` per koleksi. Firestore memakai logika OR antar aturan yang cocok,
@@ -13,12 +19,16 @@ rules_version = '2';
 // - Path yang tidak cocok dengan aturan mana pun otomatis ditolak.
 // - Superadmin hanya MEMBACA data operasional toko; ia tidak boleh membuat
 //   transaksi/produk/pengeluaran.
+// - Hanya superadmin yang boleh menulis `users`, dan hanya untuk admin/kasir
+//   (superadmin dibuat lewat skrip create-superadmin, tidak dari klien).
 //
 // Keterbatasan yang diketahui (Firestore tidak bisa memeriksanya):
 // - Tidak ada keamanan per field: kasir yang membaca produk juga melihat costPrice.
 // - Kasir menulis daily_summaries lewat increment; rules tidak bisa memverifikasi
 //   besarnya angka, hanya field mana yang boleh disentuh.
 // - Query daftar transaksi oleh kasir wajib menyertakan where('cashierId', '==', uid).
+// - Rules tidak memeriksa bahwa id di `users.storeIds` menunjuk toko yang ada;
+//   id yang tidak ada tidak memberi akses apa pun.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -28,26 +38,49 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function claimRole() {
-      return request.auth.token.get('role', '');
+    function hasUserDoc() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // User punya dokumen users/{uid} dan masih aktif.
+    function activeUser() {
+      return signedIn() && hasUserDoc() && me().isActive == true;
     }
 
     function isSuperadmin() {
-      return signedIn() && claimRole() == 'superadmin';
+      return activeUser() && me().role == 'superadmin';
     }
 
+    // Anggota toko (admin/kasir aktif), terlepas dari status tokonya. Dipakai
+    // untuk membaca dokumen toko sendiri agar aplikasi bisa menjelaskan
+    // "toko nonaktif" alih-alih sekadar gagal.
+    function memberOf(storeId) {
+      return activeUser()
+          && me().role in ['admin', 'kasir']
+          && me().get('storeIds', []) is list
+          && storeId in me().get('storeIds', []);
+    }
+
+    function storeActive(storeId) {
+      return exists(/databases/$(database)/documents/stores/$(storeId))
+          && get(/databases/$(database)/documents/stores/$(storeId)).data.isActive == true;
+    }
+
+    // Anggota toko yang tokonya aktif: syarat akses data operasional.
     function inStore(storeId) {
-      return signedIn()
-          && request.auth.token.get('storeIds', []) is list
-          && storeId in request.auth.token.get('storeIds', []);
+      return memberOf(storeId) && storeActive(storeId);
     }
 
     function isAdminOf(storeId) {
-      return claimRole() == 'admin' && inStore(storeId);
+      return inStore(storeId) && me().role == 'admin';
     }
 
     function isKasirOf(storeId) {
-      return claimRole() == 'kasir' && inStore(storeId);
+      return inStore(storeId) && me().role == 'kasir';
     }
 
     // Admin atau kasir toko tsb (admin juga boleh mencatat transaksi).
@@ -62,24 +95,56 @@ service cloud.firestore {
           : request.resource.data.diff(resource.data).affectedKeys();
     }
 
+    // Bentuk dokumen user yang boleh ditulis dari klien (admin atau kasir).
+    function validUser(data) {
+      return data.keys().hasOnly([
+            'name', 'email', 'role', 'storeIds', 'isActive', 'createdAt', 'updatedAt'
+          ])
+          && data.keys().hasAll(['name', 'email', 'role', 'storeIds', 'isActive'])
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.email is string && data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+          && data.isActive is bool
+          && data.storeIds is list
+          && data.storeIds.toSet().size() == data.storeIds.size()
+          && ((data.role == 'kasir' && data.storeIds.size() == 1)
+              || (data.role == 'admin' && data.storeIds.size() >= 1
+                  && data.storeIds.size() <= 30));
+    }
+
     // ---------- users ----------
-    // Baca diri sendiri (superadmin: semua). Tulis hanya lewat Cloud Function.
+    // Baca diri sendiri (superadmin: semua). Tulis hanya oleh superadmin: buat
+    // admin/kasir, atau ubah nama/peran/toko/isActive akun non-superadmin.
+    // Email dan createdAt tidak berubah (akun Auth-nya tidak ikut berubah).
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
-      allow write: if false;
+
+      allow create: if isSuperadmin()
+          && validUser(request.resource.data)
+          && request.resource.data.get('createdAt', request.time) == request.time
+          && request.resource.data.get('updatedAt', request.time) == request.time;
+
+      allow update: if isSuperadmin()
+          && resource.data.role != 'superadmin'
+          && validUser(request.resource.data)
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+          && (request.resource.data.get('updatedAt', null) == resource.data.get('updatedAt', null)
+              || request.resource.data.updatedAt == request.time);
+
+      allow delete: if false;
     }
 
     // ---------- stores ----------
-    // isActive hanya boleh diubah Cloud Function (agar claims ikut dicabut).
+    // Superadmin boleh mengaktifkan/menonaktifkan toko (isActive). Admin hanya
+    // mengubah pengaturan operasional tokonya.
     match /stores/{storeId} {
-      allow read: if isSuperadmin() || inStore(storeId);
+      allow read: if isSuperadmin() || memberOf(storeId);
 
       allow create: if isSuperadmin()
           && request.resource.data.isActive is bool;
 
       allow update: if
-          (isSuperadmin()
-              && request.resource.data.isActive == resource.data.isActive)
+          (isSuperadmin() && request.resource.data.isActive is bool)
           || (isAdminOf(storeId)
               && changedKeys().hasOnly([
                 'receiptHeader', 'receiptFooter', 'taxPercent', 'scanEnabled',
@@ -193,7 +258,8 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // ---------- activity_logs & weekly_reports (ditulis Cloud Functions) ----------
+      // ---------- activity_logs & weekly_reports (tidak bisa ditulis klien) ----------
+      // Disiapkan untuk Cloud Functions; belum terisi selama memakai paket Spark.
       match /activity_logs/{logId} {
         allow read: if isSuperadmin() || isAdminOf(storeId);
         allow write: if false;

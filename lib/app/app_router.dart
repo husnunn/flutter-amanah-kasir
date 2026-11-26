@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/utils/coming_soon.dart';
+import '../dev/gallery_toko_pengguna.dart';
 import '../features/admin/presentation/admin_nav.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/pilih_toko_screen.dart';
@@ -14,7 +15,7 @@ import '../features/keuangan/presentation/pengeluaran_screen.dart';
 import '../features/laporan/presentation/dashboard_screen.dart';
 import '../features/produk/data/product.dart';
 import '../features/produk/presentation/produk_screen.dart';
-import '../features/superadmin/presentation/toko_pengguna_screen.dart';
+import '../features/superadmin/presentation/toko_pengguna_page.dart';
 
 typedef _PageBuilder = Widget Function(BuildContext context);
 
@@ -100,7 +101,7 @@ class AppRouter {
   );
 
   Widget tokoPenggunaPage(BuildContext context) =>
-      TokoPenggunaScreen(onLogout: () => _logout(context));
+      TokoPenggunaPage(userName: userName, onLogout: () => _logout(context));
 
   // --- Masuk -----------------------------------------------------------------
 
@@ -204,5 +205,7 @@ class AppRouter {
 
   // --- Superadmin ------------------------------------------------------------
 
-  Route<void> tokoPengguna() => _route(tokoPenggunaPage);
+  /// Galeri UI: data contoh tanpa Firebase.
+  Route<void> tokoPengguna() =>
+      _route((c) => GalleryTokoPengguna(onLogout: () => _logout(c)));
 }

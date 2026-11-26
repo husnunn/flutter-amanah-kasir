@@ -10,12 +10,14 @@ import 'package:amanah_kasir/features/auth/state/auth_providers.dart';
 import 'package:amanah_kasir/features/kasir/presentation/kasir_screen.dart';
 import 'package:amanah_kasir/features/laporan/presentation/dashboard_screen.dart';
 import 'package:amanah_kasir/features/superadmin/presentation/toko_pengguna_screen.dart';
+import 'package:amanah_kasir/features/superadmin/state/superadmin_providers.dart';
 import 'package:amanah_kasir/core/theme/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_superadmin_repository.dart';
 import 'helpers/test_app.dart';
 
 SessionActive _active(AppRole role, {List<String> stores = const ['tk01']}) =>
@@ -56,7 +58,12 @@ Future<void> _pumpGate(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repo),
+        superadminRepositoryProvider.overrideWithValue(
+          FakeSuperadminRepository(initial: const []),
+        ),
+      ],
       child: MaterialApp(theme: AppTheme.light(), home: const AuthGate()),
     ),
   );
@@ -275,7 +282,12 @@ void main() {
         final repo = FakeAuthRepository(stores: demoStores)
           ..current = SessionActive(adminSession);
         final container = ProviderContainer(
-          overrides: [authRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            authRepositoryProvider.overrideWithValue(repo),
+            superadminRepositoryProvider.overrideWithValue(
+              FakeSuperadminRepository(initial: const []),
+            ),
+          ],
         );
         addTearDown(container.dispose);
         container.listen(authControllerProvider, (_, _) {});
@@ -307,7 +319,12 @@ void main() {
         final repo = FakeAuthRepository(stores: demoStores)
           ..current = SessionActive(session(AppRole.kasir));
         final container = ProviderContainer(
-          overrides: [authRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            authRepositoryProvider.overrideWithValue(repo),
+            superadminRepositoryProvider.overrideWithValue(
+              FakeSuperadminRepository(initial: const []),
+            ),
+          ],
         );
         addTearDown(container.dispose);
         container.listen(authControllerProvider, (_, _) {});

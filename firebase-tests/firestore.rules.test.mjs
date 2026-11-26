@@ -6,9 +6,12 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  Timestamp,
+  documentId,
   getDocs,
   increment,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -42,14 +45,76 @@ const newTrx = (cashierId, overrides = {}) => ({
 });
 
 describe('users', () => {
+  const newUser = (overrides = {}) => ({
+    name: 'Rina',
+    email: 'rina@contoh.com',
+    role: 'kasir',
+    storeIds: ['s1'],
+    isActive: true,
+    createdAt: serverTimestamp(),
+    ...overrides,
+  });
+
   it('membaca dokumen sendiri', () => ok(getDoc(d('kasir', 'users/k1'))));
   it('tidak boleh membaca user lain', () => no(getDoc(d('kasir', 'users/su'))));
   it('superadmin membaca semua user', () => ok(getDoc(d('superadmin', 'users/k1'))));
   it('anonim ditolak', () => no(getDoc(doc(anonFs(env), 'users/k1'))));
+  it('user nonaktif tetap membaca dokumennya (agar app bisa menolak dengan pesan)', () =>
+    ok(getDoc(d('kasirInactive', 'users/kx'))));
   it('klien tidak boleh mengubah role sendiri', () =>
     no(updateDoc(d('kasir', 'users/k1'), { role: 'superadmin' })));
-  it('superadmin pun tidak menulis users dari klien', () =>
-    no(setDoc(d('superadmin', 'users/baru'), { role: 'kasir' })));
+
+  describe('menulis (hanya superadmin)', () => {
+    it('superadmin membuat kasir', () =>
+      ok(setDoc(d('superadmin', 'users/baru'), newUser())));
+    it('superadmin membuat admin beberapa toko', () =>
+      ok(setDoc(d('superadmin', 'users/baru'), newUser({ role: 'admin', storeIds: ['s1', 's2'] }))));
+    it('kasir tidak membuat user', () =>
+      no(setDoc(d('kasir', 'users/baru'), newUser())));
+    it('admin tidak membuat user', () =>
+      no(setDoc(d('admin', 'users/baru'), newUser())));
+    it('claims superadmin palsu tidak memberi hak tulis', () =>
+      no(setDoc(d('kasirForgedClaims', 'users/baru'), newUser())));
+    it('tanpa dokumen user, claims superadmin palsu ditolak', () =>
+      no(setDoc(d('forgedNoDoc', 'users/baru'), newUser())));
+
+    it('superadmin tidak dibuat dari klien', () =>
+      no(setDoc(d('superadmin', 'users/baru'), newUser({ role: 'superadmin', storeIds: [] }))));
+    it('kasir wajib tepat satu toko', async () => {
+      await no(setDoc(d('superadmin', 'users/baru'), newUser({ storeIds: [] })));
+      await no(setDoc(d('superadmin', 'users/baru'), newUser({ storeIds: ['s1', 's2'] })));
+    });
+    it('admin wajib minimal satu toko', () =>
+      no(setDoc(d('superadmin', 'users/baru'), newUser({ role: 'admin', storeIds: [] }))));
+    it('toko duplikat ditolak', () =>
+      no(setDoc(d('superadmin', 'users/baru'), newUser({ role: 'admin', storeIds: ['s1', 's1'] }))));
+    it('email tidak valid ditolak', () =>
+      no(setDoc(d('superadmin', 'users/baru'), newUser({ email: 'bukan-email' }))));
+    it('nama kosong ditolak', () =>
+      no(setDoc(d('superadmin', 'users/baru'), newUser({ name: '' }))));
+    it('field tak dikenal ditolak', () =>
+      no(setDoc(d('superadmin', 'users/baru'), newUser({ extra: 1 }))));
+    it('createdAt harus waktu server', () =>
+      no(setDoc(
+        d('superadmin', 'users/baru'),
+        newUser({ createdAt: Timestamp.fromDate(new Date('2020-01-01')) }),
+      )));
+
+    it('superadmin menonaktifkan kasir', () =>
+      ok(updateDoc(d('superadmin', 'users/k1'), { isActive: false })));
+    it('superadmin memindahkan kasir ke toko lain', () =>
+      ok(updateDoc(d('superadmin', 'users/k1'), { storeIds: ['s2'] })));
+    it('superadmin tidak mengubah email (akun Auth tidak ikut berubah)', () =>
+      no(updateDoc(d('superadmin', 'users/k1'), { email: 'lain@contoh.com' })));
+    it('superadmin tidak menaikkan user menjadi superadmin', () =>
+      no(updateDoc(d('superadmin', 'users/k1'), { role: 'superadmin', storeIds: [] })));
+    it('akun superadmin (termasuk dirinya) tidak bisa diubah dari klien', () =>
+      no(updateDoc(d('superadmin', 'users/su'), { isActive: false })));
+    it('kasir tidak mengubah dokumen user lain', () =>
+      no(updateDoc(d('kasir', 'users/k2'), { isActive: false })));
+    it('user tidak bisa dihapus', () =>
+      no(deleteDoc(d('superadmin', 'users/k1'))));
+  });
 });
 
 describe('stores', () => {
@@ -71,8 +136,34 @@ describe('stores', () => {
     no(updateDoc(d('kasir', 'stores/s1'), { receiptHeader: 'X' })));
   it('superadmin mengubah nama toko', () =>
     ok(updateDoc(d('superadmin', 'stores/s1'), { name: 'Nama Baru' })));
-  it('superadmin tidak mengubah isActive dari klien (harus lewat Function)', () =>
-    no(updateDoc(d('superadmin', 'stores/s1'), { isActive: false })));
+  it('superadmin menonaktifkan dan mengaktifkan toko', async () => {
+    await ok(updateDoc(d('superadmin', 'stores/s1'), { isActive: false }));
+    await ok(updateDoc(d('superadmin', 'stores/s1'), { isActive: true }));
+  });
+  it('isActive harus boolean', () =>
+    no(updateDoc(d('superadmin', 'stores/s1'), { isActive: 'ya' })));
+  it('kasir tidak menonaktifkan toko', () =>
+    no(updateDoc(d('kasir', 'stores/s1'), { isActive: false })));
+  it('toko nonaktif tetap bisa dibaca anggotanya (agar app bisa menjelaskan)', () =>
+    ok(getDoc(d('kasirStoreOff', 'stores/s4'))));
+  it('user nonaktif tidak membaca toko', () =>
+    no(getDoc(d('kasirInactive', 'stores/s1'))));
+  it('app memuat toko lewat whereIn id dokumen', () =>
+    ok(getDocs(query(
+      collection(fs(env, 'admin'), 'stores'),
+      where(documentId(), 'in', ['s1', 's2']),
+    ))));
+  it('whereIn id tetap jalan bila salah satu toko nonaktif', () =>
+    ok(getDocs(query(
+      collection(fs(env, 'kasirStoreOff'), 'stores'),
+      where(documentId(), 'in', ['s4']),
+    ))));
+  it('superadmin mendengarkan seluruh koleksi toko dan user', async () => {
+    await ok(getDocs(collection(fs(env, 'superadmin'), 'stores')));
+    await ok(getDocs(collection(fs(env, 'superadmin'), 'users')));
+  });
+  it('admin tidak membaca seluruh koleksi user', () =>
+    no(getDocs(collection(fs(env, 'admin'), 'users'))));
   it('superadmin membuat toko baru', () =>
     ok(setDoc(d('superadmin', 'stores/s9'), { name: 'Baru', code: 'TK09', isActive: true })));
   it('admin tidak membuat toko', () =>
@@ -269,3 +360,52 @@ describe('kategori & jalur tak dikenal', () => {
     await no(addDoc(collection(fs(env, 'noRole'), 'stores/s1/expenses'), { createdBy: 'x1' }));
   });
 });
+
+describe('akses ditentukan dokumen user, bukan claims', () => {
+  it('claims superadmin palsu tidak membuka toko lain', () =>
+    no(getDoc(d('kasirForgedClaims', 'stores/s2'))));
+  it('claims superadmin palsu tidak membaca transaksi kasir lain', () =>
+    no(getDoc(d('kasirForgedClaims', 'stores/s1/transactions/t2'))));
+  it('claims superadmin palsu tidak mengubah toko', () =>
+    no(updateDoc(d('kasirForgedClaims', 'stores/s1'), { name: 'Curang' })));
+  it('claims tanpa dokumen user ditolak di mana-mana', async () => {
+    await no(getDoc(d('forgedNoDoc', 'stores/s1')));
+    await no(getDoc(d('forgedNoDoc', 'stores/s1/products/p1')));
+    await no(getDocs(collection(fs(env, 'forgedNoDoc'), 'users')));
+  });
+
+  it('user nonaktif kehilangan akses operasional', async () => {
+    await no(getDoc(d('kasirInactive', 'stores/s1/products/p1')));
+    await no(setDoc(d('kasirInactive', 'stores/s1/transactions/t9'), newTrx('kx')));
+  });
+  it('menonaktifkan user oleh superadmin langsung mencabut aksesnya', async () => {
+    await ok(getDoc(d('kasir', 'stores/s1/products/p1')));
+    await ok(updateDoc(d('superadmin', 'users/k1'), { isActive: false }));
+    await no(getDoc(d('kasir', 'stores/s1/products/p1')));
+  });
+  it('memindahkan kasir ke toko lain langsung mengubah aksesnya', async () => {
+    await ok(updateDoc(d('superadmin', 'users/k1'), { storeIds: ['s2'] }));
+    await no(getDoc(d('kasir', 'stores/s1/products/p1')));
+  });
+
+  it('toko nonaktif menutup akses operasional anggotanya', async () => {
+    await no(getDoc(d('kasirStoreOff', 'stores/s4/products/p1')));
+    await no(setDoc(d('kasirStoreOff', 'stores/s4/transactions/t9'), newTrx('k4')));
+  });
+  it('menonaktifkan toko oleh superadmin langsung menutup akses admin', async () => {
+    await ok(getDoc(d('admin', 'stores/s1/products/p1')));
+    await ok(updateDoc(d('superadmin', 'stores/s1'), { isActive: false }));
+    await no(getDoc(d('admin', 'stores/s1/products/p1')));
+    await no(updateDoc(d('admin', 'stores/s1'), { receiptHeader: 'Baru' }));
+  });
+  it('mengaktifkan kembali toko memulihkan akses', async () => {
+    await ok(updateDoc(d('superadmin', 'stores/s1'), { isActive: false }));
+    await ok(updateDoc(d('superadmin', 'stores/s1'), { isActive: true }));
+    await ok(getDoc(d('kasir', 'stores/s1/products/p1')));
+  });
+  it('superadmin tetap hanya membaca data operasional', async () => {
+    await ok(getDoc(d('superadmin', 'stores/s1/products/p1')));
+    await no(setDoc(d('superadmin', 'stores/s1/products/p2'), { name: 'Baru' }));
+  });
+});
+

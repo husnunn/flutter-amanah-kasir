@@ -1,3 +1,4 @@
+import 'package:amanah_kasir/dev/gallery_toko_pengguna.dart';
 import 'package:amanah_kasir/features/auth/presentation/login_screen.dart';
 import 'package:amanah_kasir/features/auth/presentation/pilih_toko_screen.dart';
 import 'package:amanah_kasir/features/kasir/data/receipt_data.dart';
@@ -10,7 +11,6 @@ import 'package:amanah_kasir/features/keuangan/presentation/pengeluaran_screen.d
 import 'package:amanah_kasir/features/laporan/presentation/dashboard_screen.dart';
 import 'package:amanah_kasir/features/produk/data/product.dart';
 import 'package:amanah_kasir/features/produk/presentation/produk_screen.dart';
-import 'package:amanah_kasir/features/superadmin/presentation/toko_pengguna_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -39,7 +39,7 @@ void main() {
     'Dashboard': () => const DashboardScreen(),
     'Kelola produk': () => const ProdukScreen(),
     'Catat pengeluaran': () => const PengeluaranScreen(initialAmount: 150000),
-    'Toko & pengguna': () => const TokoPenggunaScreen(),
+    'Toko & pengguna': () => const GalleryTokoPengguna(),
   };
 
   final sizes = <String, Size>{

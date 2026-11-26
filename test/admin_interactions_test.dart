@@ -1,7 +1,7 @@
+import 'package:amanah_kasir/dev/gallery_toko_pengguna.dart';
 import 'package:amanah_kasir/features/keuangan/presentation/pengeluaran_screen.dart';
 import 'package:amanah_kasir/features/laporan/presentation/dashboard_screen.dart';
 import 'package:amanah_kasir/features/produk/presentation/produk_screen.dart';
-import 'package:amanah_kasir/features/superadmin/presentation/toko_pengguna_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -53,7 +53,7 @@ void main() {
     tester,
   ) async {
     await tester.runAsync(loadAppFonts);
-    await pumpApp(tester, const TokoPenggunaScreen(), size: Screens.tablet);
+    await pumpApp(tester, const GalleryTokoPengguna(), size: Screens.tablet);
 
     expect(find.text('7 dari 8'), findsOneWidget);
     await tester.tap(find.byType(Switch));

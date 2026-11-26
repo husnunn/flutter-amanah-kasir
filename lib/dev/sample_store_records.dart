@@ -1,34 +1,38 @@
-import 'store_record.dart';
+import '../features/superadmin/data/store_record.dart';
 
-/// DATA CONTOH untuk mengisi tampilan; bukan data sungguhan.
+/// DATA CONTOH untuk galeri UI (mode GALLERY); bukan data sungguhan.
 const sampleStoreRecords = <StoreRecord>[
   StoreRecord(
+    id: 'tk01',
     code: 'TK01',
     name: 'Toko Berkah Jaya',
     area: 'Surabaya',
-    admin: 'Sari Ayu',
     createdLabel: '2 Nov 2026',
     transactionsThisMonth: 1284,
     users: [
       StoreUser(
+        uid: 'sa',
         initials: 'SA',
         name: 'Sari Ayu',
         note: 'Juga mengelola TK02, TK03',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'rw',
         initials: 'RW',
         name: 'Rina Wati',
         note: 'Shift pagi',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'bs',
         initials: 'BS',
         name: 'Budi Santoso',
         note: 'Shift sore',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'tn',
         initials: 'TN',
         name: 'Tono',
         note: 'Shift sore',
@@ -37,21 +41,23 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk02',
     code: 'TK02',
     name: 'Warung Bu Sri',
     area: 'Sidoarjo',
-    admin: 'Sari Ayu',
     createdLabel: '9 Nov 2026',
     transactionsThisMonth: 412,
     scanEnabled: false,
     users: [
       StoreUser(
+        uid: 'sa',
         initials: 'SA',
         name: 'Sari Ayu',
         note: 'Juga mengelola TK01, TK03',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'sr',
         initials: 'SR',
         name: 'Sri Rahayu',
         note: 'Shift penuh',
@@ -60,26 +66,29 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk03',
     code: 'TK03',
     name: 'Kios Sembako Makmur',
     area: 'Gresik',
-    admin: 'Sari Ayu',
     createdLabel: '12 Nov 2026',
     transactionsThisMonth: 268,
     users: [
       StoreUser(
+        uid: 'sa',
         initials: 'SA',
         name: 'Sari Ayu',
         note: 'Juga mengelola TK01, TK02',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'dw',
         initials: 'DW',
         name: 'Dewi',
         note: 'Shift pagi',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'fk',
         initials: 'FK',
         name: 'Fajar',
         note: 'Shift sore',
@@ -88,26 +97,29 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk04',
     code: 'TK04',
     name: 'Toko Sumber Rejeki',
     area: 'Malang',
-    admin: 'Hendra',
     createdLabel: '14 Nov 2026',
     transactionsThisMonth: 351,
     users: [
       StoreUser(
+        uid: 'hd',
         initials: 'HD',
         name: 'Hendra',
         note: 'Juga mengelola TK05',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'lm',
         initials: 'LM',
         name: 'Lilis',
         note: 'Shift pagi',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'yg',
         initials: 'YG',
         name: 'Yoga',
         note: 'Shift sore',
@@ -116,20 +128,22 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk05',
     code: 'TK05',
     name: 'Warung Kopi Pojok',
     area: 'Surabaya',
-    admin: 'Hendra',
     createdLabel: '16 Nov 2026',
     transactionsThisMonth: 190,
     users: [
       StoreUser(
+        uid: 'hd',
         initials: 'HD',
         name: 'Hendra',
         note: 'Juga mengelola TK04',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'nr',
         initials: 'NR',
         name: 'Nur',
         note: 'Shift penuh',
@@ -138,38 +152,43 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk06',
     code: 'TK06',
     name: 'Minimarket Sinar',
     area: 'Mojokerto',
-    admin: 'Lestari',
     createdLabel: '18 Nov 2026',
     transactionsThisMonth: 520,
     users: [
       StoreUser(
+        uid: 'ls',
         initials: 'LS',
         name: 'Lestari',
         note: 'Juga mengelola TK07',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'a1',
         initials: 'A1',
         name: 'Anton',
         note: 'Shift pagi',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'b1',
         initials: 'B1',
         name: 'Bayu',
         note: 'Shift siang',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'c1',
         initials: 'C1',
         name: 'Citra',
         note: 'Shift sore',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'd1',
         initials: 'D1',
         name: 'Dimas',
         note: 'Shift malam',
@@ -178,20 +197,22 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk07',
     code: 'TK07',
     name: 'Toko Kelontong Ijo',
     area: 'Jombang',
-    admin: 'Lestari',
     createdLabel: '19 Nov 2026',
     active: false,
     users: [
       StoreUser(
+        uid: 'ls',
         initials: 'LS',
         name: 'Lestari',
         note: 'Juga mengelola TK06',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'ij',
         initials: 'IJ',
         name: 'Ijah',
         note: 'Shift penuh',
@@ -200,26 +221,29 @@ const sampleStoreRecords = <StoreRecord>[
     ],
   ),
   StoreRecord(
+    id: 'tk08',
     code: 'TK08',
     name: 'Depot Mie Barokah',
     area: 'Pasuruan',
-    admin: 'Agus',
     createdLabel: '22 Nov 2026',
     transactionsThisMonth: 96,
     users: [
       StoreUser(
+        uid: 'ag',
         initials: 'AG',
         name: 'Agus',
         note: 'Pengelola toko',
         role: UserRole.admin,
       ),
       StoreUser(
+        uid: 'mb',
         initials: 'MB',
         name: 'Mbak Eni',
         note: 'Shift pagi',
         role: UserRole.kasir,
       ),
       StoreUser(
+        uid: 'pk',
         initials: 'PK',
         name: 'Pak Joko',
         note: 'Shift sore',

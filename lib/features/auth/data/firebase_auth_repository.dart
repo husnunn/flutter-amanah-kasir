@@ -9,10 +9,12 @@ import 'store_info.dart';
 
 /// Implementasi nyata: Firebase Auth + Firestore.
 ///
-/// Sesi dibentuk dari custom claims `role` dan `storeIds` (diset Cloud
-/// Function), lalu dicocokkan dengan dokumen `users/{uid}` (isActive) dan status
-/// toko. Bila Firestore tidak terjangkau (mis. offline dan belum ada cache),
-/// sesi tetap dibuat dari claims agar kasir bisa bekerja.
+/// Peran dan toko dibaca dari dokumen `users/{uid}`, sumber kebenaran yang
+/// sama dengan Security Rules (tanpa custom claims, jadi tidak butuh Cloud
+/// Functions). Toko yang nonaktif tidak ikut sesi. Firestore menyimpan dokumen
+/// di cache perangkat, jadi sesi tetap bisa dibuka saat offline setelah pernah
+/// berhasil masuk; bila belum ada cache dan tidak ada koneksi, pemuatan sesi
+/// gagal dan layar Login menampilkan pesannya.
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({FirebaseAuth? auth, FirebaseFirestore? db})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -31,43 +33,36 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<SessionEvent> _resolve(User? user) async {
     if (user == null) return const SessionSignedOut();
 
-    final token = await user.getIdTokenResult();
-    final role = AppRole.tryParse(token.claims?['role']);
-    if (role == null) return const SessionRejected(SessionRejection.noRole);
-    final claimStores = _stringList(token.claims?['storeIds']);
-
-    var name = user.displayName ?? user.email ?? '';
-    var storeIds = claimStores;
-    try {
-      final userDoc = await _db.doc('users/${user.uid}').get();
-      final data = userDoc.data();
-      if (data == null) return const SessionRejected(SessionRejection.noRole);
-      if (data['isActive'] == false) {
-        return const SessionRejected(SessionRejection.inactiveUser);
-      }
-      name = (data['name'] as String?) ?? name;
-      if (role != AppRole.superadmin) {
-        storeIds = await _activeStoreIds(claimStores);
-      }
-    } on FirebaseException {
-      // Firestore tidak terjangkau: pakai claims apa adanya.
+    final snapshot = await _db.doc('users/${user.uid}').get();
+    final data = snapshot.data();
+    final role = AppRole.tryParse(data?['role']);
+    if (data == null || role == null) {
+      return const SessionRejected(SessionRejection.noRole);
+    }
+    // Rules juga mensyaratkan isActive == true; selain itu dianggap nonaktif.
+    if (data['isActive'] != true) {
+      return const SessionRejected(SessionRejection.inactiveUser);
     }
 
-    if (role != AppRole.superadmin && storeIds.isEmpty) {
-      return const SessionRejected(SessionRejection.noActiveStore);
+    var storeIds = const <String>[];
+    if (role != AppRole.superadmin) {
+      storeIds = await _activeStoreIds(_stringList(data['storeIds']));
+      if (storeIds.isEmpty) {
+        return const SessionRejected(SessionRejection.noActiveStore);
+      }
     }
     return SessionActive(
       AppSession(
         uid: user.uid,
         email: user.email ?? '',
-        name: name,
+        name: (data['name'] as String?) ?? user.displayName ?? user.email ?? '',
         role: role,
         storeIds: storeIds,
       ),
     );
   }
 
-  /// Toko yang benar-benar aktif; token bisa tertinggal dari perubahan terbaru.
+  /// Toko yang benar-benar aktif (dokumen toko nonaktif tetap bisa dibaca anggotanya).
   Future<List<String>> _activeStoreIds(List<String> ids) async {
     final stores = await _fetchStores(ids);
     return [

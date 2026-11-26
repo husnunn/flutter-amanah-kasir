@@ -35,6 +35,11 @@ void main() {
     expect(formatDateLong(DateTime(2026, 1, 4)), 'Minggu, 4 Januari 2026');
   });
 
+  test('tanggal pendek bahasa Indonesia', () {
+    expect(formatDateShort(DateTime(2026, 11, 2)), '2 Nov 2026');
+    expect(formatDateShort(DateTime(2026, 8, 17)), '17 Agu 2026');
+  });
+
   test('RupiahInputFormatter memformat saat mengetik', () {
     const formatter = RupiahInputFormatter();
     final result = formatter.formatEditUpdate(

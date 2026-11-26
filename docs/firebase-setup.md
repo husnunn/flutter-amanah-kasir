@@ -7,7 +7,7 @@ dan tanpa biaya) lalu lanjut ke Bagian 2.
 | | Bagian 1: Emulator | Bagian 2: Project asli |
 | --- | --- | --- |
 | Butuh akun Google | Tidak | Ya |
-| Biaya | Gratis | Spark gratis; Cloud Functions butuh Blaze |
+| Biaya | Gratis | Gratis (paket Spark); Cloud Functions tidak dipakai |
 | Waktu | ± 10 menit | ± 30-45 menit |
 | Cocok untuk | Mencoba semua skenario login, mengembangkan | Dipakai di toko sungguhan |
 
@@ -117,18 +117,14 @@ skrip seed lagi bila perlu.
 2. **Location: `asia-southeast2` (Jakarta)**. Lokasi tidak bisa diubah setelah dibuat, jadi pilih sekarang.
 3. Pilih **Production mode** (aturan keamanan kita deploy sendiri di Langkah 7).
 
-### Langkah 4. (Untuk Cloud Functions) Upgrade ke paket Blaze
+### Langkah 4. Paket Spark (gratis) sudah cukup
 
-Login, peran, dan Security Rules berjalan di paket **Spark** (gratis). **Cloud
-Functions butuh paket Blaze** (bayar sesuai pemakaian; untuk beberapa toko
-biasanya masih di dalam kuota gratis).
+Aplikasi berjalan sepenuhnya di paket **Spark**: login, peran, Security Rules,
+tambah pengguna, dan aktif/nonaktif toko dilakukan langsung dari aplikasi ke
+Firestore, tanpa Cloud Functions. **Anda tidak perlu upgrade ke Blaze.**
 
-1. Di console: **Upgrade** (kiri bawah) dan ikuti langkahnya.
-2. **Pasang budget alert** agar tidak ada kejutan: Google Cloud Console > **Billing > Budgets & alerts > Create budget**, mis. Rp 100.000/bulan dengan peringatan di 50% dan 100%.
-
-Belum mau upgrade? Lewati Langkah 8. Anda tetap bisa login dan membuat
-pengguna lewat skrip (Langkah 9); hanya fungsi `upsertUser`, `setUserActive`,
-dan `setStoreActive` yang belum aktif.
+Folder `functions/` masih ada sebagai jalur opsional bila suatu saat memakai
+Blaze (lihat Langkah 8); aplikasi tidak bergantung padanya.
 
 ### Langkah 5. Pasang dan login CLI
 
@@ -169,10 +165,17 @@ firebase use ID-PROJECT
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
+Selalu pakai `--only`: `firebase deploy` tanpa itu ikut mencoba mendeploy Cloud
+Functions dan gagal di paket Spark. **Deploy ulang aturan setiap kali
+`firestore.rules` berubah**; aplikasi yang lebih baru bisa menampilkan "Ditolak
+Security Rules" bila aturan di server masih versi lama.
+
 Aturan lengkap ada di `firestore.rules`. Storage aktif belakangan, saat fitur
 foto produk dibangun.
 
-### Langkah 8. Deploy Cloud Functions (butuh Blaze)
+### Langkah 8. (Opsional, butuh Blaze) Deploy Cloud Functions
+
+Tidak diperlukan di paket Spark; lewati langkah ini.
 
 ```bash
 firebase deploy --only functions
@@ -228,16 +231,26 @@ Login dengan salah satu akun tadi. Selesai.
 
 ## Cara kerja peran dan akses
 
-- Peran dan toko disimpan di **custom claims** ID token: `role`
-  (`superadmin`/`admin`/`kasir`) dan `storeIds` (hanya toko yang **aktif**).
-  Claims hanya bisa diisi lewat Admin SDK (Cloud Functions dan skrip di atas),
-  tidak bisa dipalsukan dari aplikasi.
-- Sumber kebenarannya dokumen `users/{uid}`. Claims dihitung ulang dari dokumen
-  itu setiap kali user atau toko diubah.
-- Menonaktifkan user/toko: claims dicabut dan refresh token di-revoke. Perubahan
-  terasa paling lambat saat token berikutnya diperbarui (maksimal ± 1 jam).
-- Aplikasi memeriksa ulang dokumen `users/{uid}` dan status toko setiap sesi
-  dibuka. Bila Firestore tidak terjangkau (offline), sesi dilanjutkan dari claims.
+- Peran dan toko dibaca dari dokumen **`users/{uid}`** (`role`:
+  `superadmin`/`admin`/`kasir`, `storeIds`, `isActive`). Dokumen yang sama dipakai
+  aplikasi dan Security Rules, jadi tidak ada custom claims dan tidak perlu
+  Cloud Functions.
+- Hanya superadmin yang boleh menulis `users` (membuat admin/kasir, mengubah
+  toko atau status). Superadmin dibuat lewat skrip `create-superadmin`, tidak
+  dari aplikasi. Akun login baru dibuat aplikasi lewat app Firebase kedua agar
+  sesi superadmin tidak berganti.
+- Menonaktifkan user (`isActive: false`) atau toko berlaku **seketika** di
+  Security Rules: semua baca/tulis data toko ditolak pada permintaan berikutnya.
+  Layar yang sedang terbuka baru menyadarinya saat aplikasi dibuka ulang atau
+  token diperbarui.
+- Tiap permintaan membaca dokumen user (dan dokumen toko) lewat `get()` di
+  Rules; keduanya dihitung sebagai pembacaan dokumen biasa (kuota Spark 50 ribu
+  per hari, cukup untuk beberapa toko).
+- Aplikasi membaca `users/{uid}` saat sesi dibuka. Firestore menyimpannya di
+  cache perangkat, jadi sesi tetap bisa dibuka offline setelah pernah berhasil
+  masuk.
+- Peran dan toko di skrip `provision`/`create-superadmin` masih ikut mengisi
+  custom claims; itu tidak dipakai lagi dan tidak berbahaya.
 
 ## Menjalankan tes backend
 
@@ -247,7 +260,7 @@ Aturan keamanan (Firestore dan Storage), diuji di emulator:
 cd firebase-tests && npm test
 ```
 
-Smoke test end-to-end (Auth + Firestore + Functions: login tiap peran, claims, semua fungsi):
+Smoke test jalur opsional Cloud Functions (hanya relevan bila memakai Blaze; aplikasi tidak bergantung padanya):
 
 ```bash
 cd firebase-tests && npm run smoke
@@ -267,11 +280,11 @@ cd functions && npm test
 | Layar "Firebase belum disiapkan" | `lib/firebase_options.dart` masih placeholder. Jalankan Langkah 6, atau pakai `--dart-define=USE_EMULATOR=true` / `GALLERY=true`. |
 | `CLEARTEXT communication ... not permitted` | Hanya terjadi di build release. Mode emulator hanya untuk build debug (manifest debug sudah mengizinkan HTTP). |
 | Tidak bisa terhubung ke emulator dari HP fisik | Pakai `--dart-define=EMULATOR_HOST=<IP LAN komputer>`, satu Wi-Fi, dan izinkan port 9099/8080/5001 di firewall. |
-| "Akun Anda belum diberi peran" | Akun dibuat manual di console tanpa claims. Buat ulang lewat `provision.mjs`, atau jalankan `create-superadmin.mjs` untuk superadmin. |
-| `permission-denied` setelah peran diubah | Token lama belum memuat claims baru. Keluar lalu masuk lagi. |
+| "Akun Anda belum diberi peran" | Akun login ada tetapi dokumen `users/{uid}` belum ada. Tambahkan lewat layar Toko & Pengguna (Tambah pengguna), atau lewat `provision.mjs`. |
+| `permission-denied` / "Ditolak Security Rules" | Aturan di server masih versi lama: jalankan `firebase deploy --only firestore:rules` (Langkah 7). Perubahan peran/toko di dokumen `users` berlaku langsung, tanpa keluar-masuk. |
 | Fungsi tidak ditemukan / salah region | Klien dan fungsi harus di `asia-southeast2` (`AppEnv.functionsRegion` dan `setGlobalOptions` di `functions/index.js`). |
 | `flutterfire: command not found` | Tambahkan `~/.pub-cache/bin` ke `PATH`. |
-| `firebase deploy --only functions` meminta Blaze | Upgrade paket (Langkah 4) atau lewati Cloud Functions untuk sementara. |
+| `firebase deploy` gagal soal Cloud Functions/Blaze | Pakai `firebase deploy --only firestore:rules,firestore:indexes`; Functions tidak dipakai di paket Spark. |
 
 ## Batasan yang diketahui
 
@@ -281,5 +294,5 @@ Ini keterbatasan Firestore, bukan kekeliruan konfigurasi; semuanya tercatat juga
 - Kasir menulis ringkasan harian lewat increment; rules hanya membatasi field mana
   yang boleh disentuh, bukan besar angkanya.
 - Query riwayat transaksi oleh kasir wajib menyertakan `where('cashierId', '==', uid)`.
-- Custom claims dibatasi 1.000 byte (cukup untuk ± 30 toko per admin).
-- User yang baru dinonaktifkan masih bisa bekerja offline sampai token kedaluwarsa.
+- Admin dibatasi 30 toko per akun (diperiksa di `firestore.rules`).
+- User yang baru dinonaktifkan masih bisa bekerja offline sampai perangkatnya tersambung lagi; tulisan offline ditolak server saat disinkronkan.
