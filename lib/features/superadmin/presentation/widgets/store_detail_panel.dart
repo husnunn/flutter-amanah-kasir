@@ -1,30 +1,45 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/theme/theme.dart';
-import '../../../../core/utils/coming_soon.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../data/managed_user.dart';
 import '../../data/store_record.dart';
+import '../../state/superadmin_providers.dart';
+import 'detail_parts.dart';
 
-/// Panel detail toko (340 dp): sakelar aktif, info, daftar pengguna, aksi.
-class StoreDetailPanel extends StatelessWidget {
+/// Panel detail toko (340 dp): sakelar aktif, info, pengguna toko, aksi.
+class StoreDetailPanel extends ConsumerWidget {
   const StoreDetailPanel({
     super.key,
     required this.store,
+    required this.users,
     required this.onToggleActive,
+    required this.onEdit,
+    required this.onAddUser,
   });
 
   final StoreRecord store;
+
+  /// Pengguna yang terikat ke toko ini (admin dulu).
+  final List<ManagedUser> users;
   final ValueChanged<bool> onToggleActive;
+  final VoidCallback onEdit;
+  final VoidCallback onAddUser;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.text;
     final colors = context.colors;
     final muted = text.labelMedium?.copyWith(
       color: colors.onSurfaceVariant,
       fontWeight: FontWeight.w500,
     );
+    final created = store.createdAt;
+    final transactions = ref
+        .watch(monthlyTransactionsProvider(store.id))
+        .when(data: formatNumber, loading: () => '...', error: (_, _) => '-');
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -54,7 +69,9 @@ class StoreDetailPanel extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${store.area} · dibuat ${store.createdLabel}',
+                      created == null
+                          ? 'Kode ${store.code}'
+                          : 'Dibuat ${formatDateShort(created)}',
                       style: muted,
                     ),
                   ],
@@ -62,38 +79,24 @@ class StoreDetailPanel extends StatelessWidget {
               ),
             ],
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.app.surfaceAlt,
-              borderRadius: AppRadius.mdAll,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.xxs,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Toko aktif',
-                    style: text.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Switch(value: store.active, onChanged: onToggleActive),
-                ],
-              ),
-            ),
+          ActiveSwitchRow(
+            label: 'Toko aktif',
+            value: store.isActive,
+            onChanged: onToggleActive,
           ),
-          _InfoRow(
+          DetailInfoRow(
+            label: 'Alamat',
+            value: store.address.isEmpty ? '-' : store.address,
+          ),
+          DetailInfoRow(
+            label: 'Telepon',
+            value: store.phone.isEmpty ? '-' : store.phone,
+          ),
+          DetailInfoRow(
             label: 'Scan barcode',
             value: store.scanEnabled ? 'Aktif' : 'Nonaktif',
           ),
-          _InfoRow(
-            label: 'Transaksi bulan ini',
-            value: formatNumber(store.transactionsThisMonth),
-          ),
+          DetailInfoRow(label: 'Transaksi bulan ini', value: transactions),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -102,124 +105,26 @@ class StoreDetailPanel extends StatelessWidget {
                 'Pengguna di toko ini',
                 style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              Text('${store.users.length} orang', style: muted),
+              Text('${users.length} orang', style: muted),
             ],
           ),
           Expanded(
             child: ListView.separated(
-              itemCount: store.users.length + 1,
+              itemCount: users.length + 1,
               separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, i) {
-                if (i == store.users.length) {
-                  return DashedBorderBox(
-                    radius: AppRadius.mdAll,
-                    background: colors.surface,
-                    onTap: () => showComingSoon(context, 'Tambah pengguna'),
-                    child: SizedBox(
-                      height: AppSize.buttonSmall,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: AppSpacing.xs,
-                        children: [
-                          AppIcon(
-                            AppIcons.plus,
-                            size: AppSize.iconSm,
-                            color: colors.primary,
-                            strokeWidth: 2.2,
-                          ),
-                          Text(
-                            'Tambah pengguna',
-                            style: text.bodyMedium?.copyWith(
-                              color: colors.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return _UserRow(user: store.users[i]);
-              },
+              itemBuilder: (context, i) => i == users.length
+                  ? DashedAddButton(label: 'Tambah pengguna', onTap: onAddUser)
+                  : PanelUserRow(user: users[i]),
             ),
           ),
           AppButton(
             label: 'Edit data toko',
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.medium,
-            onPressed: () => showComingSoon(context, 'Edit data toko'),
+            onPressed: onEdit,
           ),
         ],
       ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = context.text;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: text.bodySmall?.copyWith(
-            color: context.colors.onSurfaceVariant,
-          ),
-        ),
-        Text(
-          value,
-          style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-}
-
-class _UserRow extends StatelessWidget {
-  const _UserRow({required this.user});
-
-  final StoreUser user;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = context.text;
-    return Row(
-      spacing: AppSpacing.sm,
-      children: [
-        InitialAvatar(user.initials, size: AppSpacing.xxl + 4),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                user.name,
-                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                user.note,
-                style: text.labelMedium?.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-        StatusBadge(
-          user.role.label,
-          tone: user.role == UserRole.admin
-              ? BadgeTone.info
-              : BadgeTone.neutral,
-          rounded: true,
-        ),
-      ],
     );
   }
 }

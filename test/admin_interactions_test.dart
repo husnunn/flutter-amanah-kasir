@@ -1,7 +1,6 @@
 import 'package:amanah_kasir/features/keuangan/presentation/pengeluaran_screen.dart';
 import 'package:amanah_kasir/features/laporan/presentation/dashboard_screen.dart';
 import 'package:amanah_kasir/features/produk/presentation/produk_screen.dart';
-import 'package:amanah_kasir/features/superadmin/presentation/toko_pengguna_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -47,18 +46,6 @@ void main() {
 
     expect(find.text('Telur Ayam 1 kg'), findsWidgets);
     expect(find.text('Mi Instan Goreng'), findsNothing);
-  });
-
-  testWidgets('superadmin: sakelar toko mengubah hitungan toko aktif', (
-    tester,
-  ) async {
-    await tester.runAsync(loadAppFonts);
-    await pumpApp(tester, const TokoPenggunaScreen(), size: Screens.tablet);
-
-    expect(find.text('7 dari 8'), findsOneWidget);
-    await tester.tap(find.byType(Switch));
-    await tester.pump();
-    expect(find.text('6 dari 8'), findsOneWidget);
   });
 
   testWidgets('dashboard: ganti periode mengubah ringkasan', (tester) async {

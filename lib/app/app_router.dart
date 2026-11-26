@@ -14,6 +14,7 @@ import '../features/keuangan/presentation/pengeluaran_screen.dart';
 import '../features/laporan/presentation/dashboard_screen.dart';
 import '../features/produk/data/product.dart';
 import '../features/produk/presentation/produk_screen.dart';
+import '../features/superadmin/data/sample_superadmin_data.dart';
 import '../features/superadmin/presentation/toko_pengguna_screen.dart';
 
 typedef _PageBuilder = Widget Function(BuildContext context);
@@ -31,6 +32,7 @@ class AppRouter {
   const AppRouter({
     this.onLogout,
     this.onSwitchStore,
+    this.userId = '',
     this.userName = 'Sari Ayu',
     this.storeName = 'Toko Berkah Jaya',
     this.storeCount = 3,
@@ -42,6 +44,8 @@ class AppRouter {
   /// Kembali ke pemilihan toko. Null = perilaku galeri.
   final VoidCallback? onSwitchStore;
 
+  /// Id akun yang sedang masuk (dipakai layar superadmin untuk tanda "Anda").
+  final String userId;
   final String userName;
   final String storeName;
   final int storeCount;
@@ -99,8 +103,11 @@ class AppRouter {
     onSwitchStore: () => _switchStore(context),
   );
 
-  Widget tokoPenggunaPage(BuildContext context) =>
-      TokoPenggunaScreen(onLogout: () => _logout(context));
+  Widget tokoPenggunaPage(BuildContext context) => TokoPenggunaScreen(
+    currentUid: userId,
+    userName: userName,
+    onLogout: () => _logout(context),
+  );
 
   // --- Masuk -----------------------------------------------------------------
 
@@ -204,5 +211,13 @@ class AppRouter {
 
   // --- Superadmin ------------------------------------------------------------
 
-  Route<void> tokoPengguna() => _route(tokoPenggunaPage);
+  /// Galeri: akun contoh "Pemilik Aplikasi" sedang masuk. Datanya dari
+  /// repositori contoh yang dipasang di `main.dart` (mode galeri) atau di tes.
+  Route<void> tokoPengguna() => _route(
+    (c) => TokoPenggunaScreen(
+      currentUid: sampleOwnerUid,
+      userName: 'Pemilik Aplikasi',
+      onLogout: () => _logout(c),
+    ),
+  );
 }

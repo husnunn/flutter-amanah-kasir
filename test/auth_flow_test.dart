@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/superadmin_helpers.dart';
 import 'helpers/test_app.dart';
 
 SessionActive _active(AppRole role, {List<String> stores = const ['tk01']}) =>
@@ -56,7 +57,10 @@ Future<void> _pumpGate(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repo),
+        ...superadminOverrides(),
+      ],
       child: MaterialApp(theme: AppTheme.light(), home: const AuthGate()),
     ),
   );

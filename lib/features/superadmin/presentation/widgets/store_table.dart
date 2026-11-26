@@ -3,75 +3,54 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../data/store_record.dart';
+import '../../state/superadmin_selectors.dart';
+import 'directory_table_parts.dart';
 
-/// Tabel toko superadmin: Toko | Admin | Kasir | Status. Baris terpilih
-/// berlatar hijau sangat muda.
+const _columns = [
+  DirectoryColumn('Toko', 5),
+  DirectoryColumn('Admin', 3),
+  DirectoryColumn('Kasir', 1, alignEnd: true),
+  DirectoryColumn('Status', 2),
+];
+
+/// Tabel toko: Toko | Admin | Kasir | Status. [staff] berisi ringkasan staf
+/// aktif per id toko.
 class StoreTable extends StatelessWidget {
   const StoreTable({
     super.key,
     required this.stores,
-    required this.selectedCode,
+    required this.staff,
+    required this.selectedId,
     required this.onSelect,
   });
 
   final List<StoreRecord> stores;
-  final String? selectedCode;
+  final Map<String, StoreStaff> staff;
+  final String? selectedId;
   final ValueChanged<StoreRecord> onSelect;
-
-  static const int _flexStore = 5;
-  static const int _flexAdmin = 2;
-  static const int _flexKasir = 1;
-  static const int _flexStatus = 2;
 
   @override
   Widget build(BuildContext context) {
-    final head = context.text.labelMedium?.copyWith(color: context.app.ink3);
-    Widget cell(int flex, String label, {TextAlign align = TextAlign.start}) =>
-        Expanded(
-          flex: flex,
-          child: Text(label, textAlign: align, style: head),
-        );
-
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          ColoredBox(
-            color: context.app.surfaceAlt,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              child: Row(
-                spacing: AppSpacing.sm,
-                children: [
-                  cell(_flexStore, 'Toko'),
-                  cell(_flexAdmin, 'Admin'),
-                  cell(_flexKasir, 'Kasir', align: TextAlign.end),
-                  cell(_flexStatus, 'Status'),
-                ],
-              ),
+    return DirectoryTable(
+      columns: _columns,
+      child: stores.isEmpty
+          ? const StateView(
+              icon: AppIcons.store,
+              title: 'Toko tidak ditemukan',
+              message: 'Coba kata kunci lain.',
+            )
+          : ListView.builder(
+              itemCount: stores.length,
+              itemBuilder: (context, i) {
+                final store = stores[i];
+                return _StoreRow(
+                  store: store,
+                  staff: staff[store.id],
+                  selected: store.id == selectedId,
+                  onTap: () => onSelect(store),
+                );
+              },
             ),
-          ),
-          Expanded(
-            child: stores.isEmpty
-                ? const StateView(
-                    icon: AppIcons.store,
-                    title: 'Toko tidak ditemukan',
-                    message: 'Coba kata kunci lain.',
-                  )
-                : ListView.builder(
-                    itemCount: stores.length,
-                    itemBuilder: (context, i) => _StoreRow(
-                      store: stores[i],
-                      selected: stores[i].code == selectedCode,
-                      onTap: () => onSelect(stores[i]),
-                    ),
-                  ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -79,11 +58,13 @@ class StoreTable extends StatelessWidget {
 class _StoreRow extends StatelessWidget {
   const _StoreRow({
     required this.store,
+    required this.staff,
     required this.selected,
     required this.onTap,
   });
 
   final StoreRecord store;
+  final StoreStaff? staff;
   final bool selected;
   final VoidCallback onTap;
 
@@ -91,99 +72,65 @@ class _StoreRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = context.text;
     final colors = context.colors;
-    return Semantics(
-      button: true,
+    return DirectoryRow(
+      columns: _columns,
       selected: selected,
-      child: Material(
-        color: selected ? context.app.selectedRow : colors.surface,
-        child: InkWell(
-          onTap: onTap,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: colors.outlineVariant)),
+      onTap: onTap,
+      cells: [
+        Row(
+          spacing: AppSpacing.sm,
+          children: [
+            InitialBlock(
+              label: store.code,
+              tone: ToneName.slate,
+              width: AppSize.chip,
+              height: AppSize.chip,
+              style: text.labelSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              child: Row(
-                spacing: AppSpacing.sm,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: StoreTable._flexStore,
-                    child: Row(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        InitialBlock(
-                          label: store.code,
-                          tone: ToneName.slate,
-                          width: AppSize.chip,
-                          height: AppSize.chip,
-                          style: text.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                store.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: text.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                store.area,
-                                style: text.labelMedium?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  Text(
+                    store.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  Expanded(
-                    flex: StoreTable._flexAdmin,
-                    child: Text(
-                      store.admin,
-                      style: text.bodySmall?.copyWith(color: context.app.ink2),
-                    ),
-                  ),
-                  Expanded(
-                    flex: StoreTable._flexKasir,
-                    child: Text(
-                      '${store.kasirCount}',
-                      textAlign: TextAlign.end,
-                      style: text.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: StoreTable._flexStatus,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: StatusBadge(
-                        store.active ? 'Aktif' : 'Nonaktif',
-                        tone: store.active
-                            ? BadgeTone.success
-                            : BadgeTone.neutral,
-                      ),
+                  Text(
+                    store.address.isEmpty ? '-' : store.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+        Text(
+          staff?.adminLabel ?? '-',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.bodySmall?.copyWith(color: context.app.ink2),
+        ),
+        Text(
+          '${staff?.kasirCount ?? 0}',
+          textAlign: TextAlign.end,
+          style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        FitCell(
+          child: StatusBadge(
+            store.isActive ? 'Aktif' : 'Nonaktif',
+            tone: store.isActive ? BadgeTone.success : BadgeTone.neutral,
           ),
         ),
-      ),
+      ],
     );
   }
 }

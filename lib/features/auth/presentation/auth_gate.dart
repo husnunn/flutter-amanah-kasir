@@ -94,6 +94,7 @@ class _SignedInHome extends ConsumerWidget {
     if (session.role == AppRole.superadmin) {
       return AppRouter(
         onLogout: signOut,
+        userId: session.uid,
         userName: session.name,
       ).tokoPenggunaPage(context);
     }

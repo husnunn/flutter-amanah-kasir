@@ -10,10 +10,12 @@ import 'package:amanah_kasir/features/keuangan/presentation/pengeluaran_screen.d
 import 'package:amanah_kasir/features/laporan/presentation/dashboard_screen.dart';
 import 'package:amanah_kasir/features/produk/data/product.dart';
 import 'package:amanah_kasir/features/produk/presentation/produk_screen.dart';
+import 'package:amanah_kasir/features/superadmin/data/sample_superadmin_data.dart';
 import 'package:amanah_kasir/features/superadmin/presentation/toko_pengguna_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/superadmin_helpers.dart';
 import 'helpers/test_app.dart';
 
 CartController _cart() => CartController()..seedSample(sampleProducts);
@@ -39,7 +41,8 @@ void main() {
     'Dashboard': () => const DashboardScreen(),
     'Kelola produk': () => const ProdukScreen(),
     'Catat pengeluaran': () => const PengeluaranScreen(initialAmount: 150000),
-    'Toko & pengguna': () => const TokoPenggunaScreen(),
+    'Toko & pengguna': () =>
+        const TokoPenggunaScreen(currentUid: sampleOwnerUid),
   };
 
   final sizes = <String, Size>{
@@ -53,7 +56,12 @@ void main() {
     for (final size in sizes.entries) {
       testWidgets('${screen.key} @ ${size.key}', (tester) async {
         await tester.runAsync(loadAppFonts);
-        await pumpApp(tester, screen.value(), size: size.value);
+        await pumpApp(
+          tester,
+          screen.value(),
+          size: size.value,
+          overrides: superadminOverrides(),
+        );
         expect(tester.takeException(), isNull);
       });
     }
@@ -65,6 +73,7 @@ void main() {
         screen.value(),
         size: Screens.phone,
         textScale: 1.3,
+        overrides: superadminOverrides(),
       );
       expect(tester.takeException(), isNull);
     });
