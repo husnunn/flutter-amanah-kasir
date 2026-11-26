@@ -62,6 +62,7 @@ export async function seedAll({ auth, db }) {
       isActive: s.isActive,
       createdAt: FieldValue.serverTimestamp(),
     });
+    await db.doc(`store_codes/${s.code}`).set({ storeId: s.id, createdAt: FieldValue.serverTimestamp() });
   }
 
   // Kategori + produk contoh untuk toko pertama

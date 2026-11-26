@@ -8,6 +8,7 @@ const { HttpsError, onCall } = require('firebase-functions/v2/https');
 
 const { syncUserAccess } = require('./src/access');
 const { canManage, validateUserInput } = require('./src/claims');
+const { validateStoreInput } = require('./src/stores');
 
 initializeApp();
 
@@ -148,4 +149,61 @@ exports.setStoreActive = onCall(async (request) => {
     members.docs.map((doc) => syncUserAccess(deps, doc.id, { revoke: !isActive })),
   );
   return { storeId, isActive, affectedUsers: members.size };
+});
+
+/**
+ * Membuat atau mengubah toko (hanya superadmin).
+ * data: {storeId?, code, name, address?, phone?, scanEnabled?}; tanpa storeId = buat baru.
+ *
+ * Kode toko dipakai di nomor nota dan harus unik. Firestore tidak bisa menjamin
+ * keunikan lewat rules, jadi pembuatan toko memakai transaksi atas
+ * `store_codes/{kode}`. Kode tidak bisa diubah setelah toko dibuat.
+ */
+exports.upsertStore = onCall(async (request) => {
+  requireSuperadmin(request);
+  const data = request.data || {};
+  const isCreate = !data.storeId;
+
+  const parsed = validateStoreInput(data, { isCreate });
+  if (!parsed.ok) throw new HttpsError('invalid-argument', parsed.error);
+  const input = parsed.value;
+
+  if (isCreate) {
+    const storeRef = db.collection('stores').doc();
+    const codeRef = db.doc(`store_codes/${input.code}`);
+    await db.runTransaction(async (tx) => {
+      if ((await tx.get(codeRef)).exists) {
+        throw new HttpsError('already-exists', `Kode toko ${input.code} sudah dipakai.`);
+      }
+      tx.create(codeRef, { storeId: storeRef.id, createdAt: FieldValue.serverTimestamp() });
+      tx.create(storeRef, {
+        code: input.code,
+        name: input.name,
+        address: input.address,
+        phone: input.phone,
+        receiptHeader: input.name,
+        receiptFooter: 'Terima kasih atas kunjungan Anda',
+        taxPercent: 0,
+        scanEnabled: input.scanEnabled === true,
+        isActive: true,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+    return { storeId: storeRef.id, created: true };
+  }
+
+  const ref = db.doc(`stores/${input.storeId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Toko tidak ditemukan.');
+  if (input.code && input.code !== snap.get('code')) {
+    throw new HttpsError('invalid-argument', 'Kode toko tidak bisa diubah.');
+  }
+  await ref.update({
+    name: input.name,
+    address: input.address,
+    phone: input.phone,
+    ...(input.scanEnabled === undefined ? {} : { scanEnabled: input.scanEnabled }),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  return { storeId: input.storeId, created: false };
 });

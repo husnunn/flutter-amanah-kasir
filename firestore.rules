@@ -70,21 +70,20 @@ service cloud.firestore {
     }
 
     // ---------- stores ----------
-    // isActive hanya boleh diubah Cloud Function (agar claims ikut dicabut).
+    // Toko dibuat dan diubah (nama, alamat, kode, isActive) HANYA lewat Cloud
+    // Function `upsertStore`/`setStoreActive`: kode toko harus unik (dipakai di
+    // nomor nota) dan penonaktifan harus ikut mencabut claims. Yang boleh diubah
+    // langsung dari klien hanya pengaturan nota/printer oleh admin toko itu.
     match /stores/{storeId} {
       allow read: if isSuperadmin() || inStore(storeId);
 
-      allow create: if isSuperadmin()
-          && request.resource.data.isActive is bool;
+      allow create: if false;
 
-      allow update: if
-          (isSuperadmin()
-              && request.resource.data.isActive == resource.data.isActive)
-          || (isAdminOf(storeId)
-              && changedKeys().hasOnly([
-                'receiptHeader', 'receiptFooter', 'taxPercent', 'scanEnabled',
-                'printerName', 'printerPaperMm', 'updatedAt'
-              ]));
+      allow update: if isAdminOf(storeId)
+          && changedKeys().hasOnly([
+            'receiptHeader', 'receiptFooter', 'taxPercent', 'scanEnabled',
+            'printerName', 'printerPaperMm', 'updatedAt'
+          ]);
 
       allow delete: if false;
 

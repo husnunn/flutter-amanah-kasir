@@ -70,21 +70,29 @@ const db = getFirestore(app);
 if (command === 'store') {
   rl.close();
   for (const key of ['id', 'code', 'name']) if (!values[key]) fail(`Isi --${key}.`);
+  const code = values.code.trim().toUpperCase();
   try {
-    await db.doc(`stores/${values.id}`).create({
-      code: values.code,
-      name: values.name,
-      address: values.address,
-      phone: values.phone,
-      receiptHeader: values.name,
-      receiptFooter: 'Terima kasih atas kunjungan Anda',
-      taxPercent: 0,
-      scanEnabled: false,
-      isActive: true,
-      createdAt: FieldValue.serverTimestamp(),
+    await db.runTransaction(async (tx) => {
+      const codeRef = db.doc(`store_codes/${code}`);
+      const storeRef = db.doc(`stores/${values.id}`);
+      if ((await tx.get(codeRef)).exists) throw new Error(`Kode toko "${code}" sudah dipakai.`);
+      if ((await tx.get(storeRef)).exists) throw new Error(`Toko "${values.id}" sudah ada.`);
+      tx.create(codeRef, { storeId: values.id, createdAt: FieldValue.serverTimestamp() });
+      tx.create(storeRef, {
+        code,
+        name: values.name,
+        address: values.address,
+        phone: values.phone,
+        receiptHeader: values.name,
+        receiptFooter: 'Terima kasih atas kunjungan Anda',
+        taxPercent: 0,
+        scanEnabled: false,
+        isActive: true,
+        createdAt: FieldValue.serverTimestamp(),
+      });
     });
   } catch (error) {
-    fail(error.code === 6 ? `Toko "${values.id}" sudah ada.` : error.message);
+    fail(error.message);
   }
   console.log(`Toko "${values.id}" (${values.name}) dibuat.`);
 } else {

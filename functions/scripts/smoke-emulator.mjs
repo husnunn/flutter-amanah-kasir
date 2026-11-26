@@ -133,6 +133,48 @@ await check('upsertUser: email yang sama ditolak', async () => {
   assert.equal(r.error?.status, 'ALREADY_EXISTS');
 });
 
+let newStoreId;
+await check('upsertStore tanpa login ditolak', async () => {
+  const r = await call('upsertStore', { code: 'NEW1', name: 'Toko Baru' });
+  assert.equal(r.error?.status, 'UNAUTHENTICATED');
+});
+await check('upsertStore oleh admin ditolak', async () => {
+  const r = await call('upsertStore', { code: 'NEW1', name: 'Toko Baru' }, adminToken);
+  assert.equal(r.error?.status, 'PERMISSION_DENIED');
+});
+await check('upsertStore: toko baru dibuat dengan id otomatis dan kode terdaftar', async () => {
+  const r = await call('upsertStore', { code: ' new1 ', name: 'Toko Baru', address: 'Jl. Baru 1', phone: '0812-000', scanEnabled: true }, superToken);
+  assert.equal(r.result?.created, true, JSON.stringify(r));
+  newStoreId = r.result.storeId;
+  const store = (await deps.db.doc(`stores/${newStoreId}`).get()).data();
+  assert.equal(store.code, 'NEW1');
+  assert.equal(store.isActive, true);
+  assert.equal(store.scanEnabled, true);
+  assert.equal(store.receiptHeader, 'Toko Baru');
+  assert.equal((await deps.db.doc('store_codes/NEW1').get()).get('storeId'), newStoreId);
+});
+await check('upsertStore: kode ganda ditolak (tanpa peduli huruf besar/kecil)', async () => {
+  for (const code of ['NEW1', 'new1', 'TK01']) {
+    const r = await call('upsertStore', { code, name: 'Lagi' }, superToken);
+    assert.equal(r.error?.status, 'ALREADY_EXISTS', `${code}: ${JSON.stringify(r)}`);
+  }
+});
+await check('upsertStore: kode tidak valid dan nama kosong ditolak', async () => {
+  for (const bad of [{ code: 'x', name: 'Toko' }, { code: 'ADA SPASI', name: 'Toko' }, { code: 'OKE1', name: ' ' }, { name: 'Tanpa kode' }]) {
+    const r = await call('upsertStore', bad, superToken);
+    assert.equal(r.error?.status, 'INVALID_ARGUMENT', JSON.stringify(bad));
+  }
+});
+await check('upsertStore: ubah nama/alamat, kode tetap dan tidak bisa diubah', async () => {
+  const ok = await call('upsertStore', { storeId: newStoreId, code: 'NEW1', name: 'Toko Baru 2', address: 'Jl. Baru 2' }, superToken);
+  assert.equal(ok.result?.created, false, JSON.stringify(ok));
+  assert.equal((await deps.db.doc(`stores/${newStoreId}`).get()).get('name'), 'Toko Baru 2');
+  const bad = await call('upsertStore', { storeId: newStoreId, code: 'NEW2', name: 'Toko Baru 2' }, superToken);
+  assert.equal(bad.error?.status, 'INVALID_ARGUMENT', JSON.stringify(bad));
+  const missing = await call('upsertStore', { storeId: 'tidak-ada', name: 'Toko' }, superToken);
+  assert.equal(missing.error?.status, 'NOT_FOUND', JSON.stringify(missing));
+});
+
 await check('setStoreActive(tk01, false): claims kasir dicabut + refresh token di-revoke', async () => {
   // Catatan: Auth Emulator tidak menegakkan pencabutan saat refresh token ditukar
   // (Firebase asli menolaknya dengan TOKEN_EXPIRED). Yang bisa diverifikasi di sini:

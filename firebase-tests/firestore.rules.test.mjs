@@ -69,12 +69,16 @@ describe('stores', () => {
     no(updateDoc(d('admin', 'stores/s1'), { isActive: false })));
   it('kasir tidak mengubah pengaturan toko', () =>
     no(updateDoc(d('kasir', 'stores/s1'), { receiptHeader: 'X' })));
-  it('superadmin mengubah nama toko', () =>
-    ok(updateDoc(d('superadmin', 'stores/s1'), { name: 'Nama Baru' })));
-  it('superadmin tidak mengubah isActive dari klien (harus lewat Function)', () =>
+  it('superadmin tidak mengubah toko dari klien (harus lewat upsertStore)', () =>
+    no(updateDoc(d('superadmin', 'stores/s1'), { name: 'Nama Baru' })));
+  it('superadmin tidak mengubah isActive dari klien (harus lewat setStoreActive)', () =>
     no(updateDoc(d('superadmin', 'stores/s1'), { isActive: false })));
-  it('superadmin membuat toko baru', () =>
-    ok(setDoc(d('superadmin', 'stores/s9'), { name: 'Baru', code: 'TK09', isActive: true })));
+  it('superadmin tidak membuat toko dari klien (kode harus unik lewat upsertStore)', () =>
+    no(setDoc(d('superadmin', 'stores/s9'), { name: 'Baru', code: 'TK09', isActive: true })));
+  it('store_codes tidak bisa diakses klien', async () => {
+    await no(getDoc(d('superadmin', 'store_codes/TK01')));
+    await no(setDoc(d('superadmin', 'store_codes/TK99'), { storeId: 'x' }));
+  });
   it('admin tidak membuat toko', () =>
     no(setDoc(d('admin', 'stores/s9'), { name: 'Baru', isActive: true })));
   it('toko tidak bisa dihapus', () => no(deleteDoc(d('superadmin', 'stores/s1'))));
